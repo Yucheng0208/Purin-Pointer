@@ -5,3 +5,6 @@ obj/
 artifacts/
 publish/
 .DS_Store
+# Release files staged in the repo root for uploading to GitHub
+/PurinPointer-win-*.zip
+/release-notes.md

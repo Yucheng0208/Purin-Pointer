@@ -242,6 +242,8 @@ var tests = new List<(string Name, Action Run)>
         True(Versions.IsNewer("v0.2.0", "0.1.9"), "minor");
         True(Versions.IsNewer("v0.10.0", "0.9.0"), "numeric not lexical");
         True(!Versions.IsNewer("v0.1.0", "0.1.0"), "same");
+        True(!Versions.IsNewer("v.0.1.0", "0.1.0"), "dotted tag reads as the same version");
+        True(Versions.IsNewer("v.0.2.0", "0.1.0"), "dotted tag still compares as newer");
     }),
     ("natural sort puts 2 before 10", () =>
     {
