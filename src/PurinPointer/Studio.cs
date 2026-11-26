@@ -59,8 +59,11 @@ public sealed class Studio
             }
             else
             {
-                ApplyLanguage("system");
-                Library = Library.CreateNew(T("newTheme"));
+                // Name the first theme in the system language without switching the UI yet:
+                // the window redraws on a language change, and there is no theme until this returns.
+                var code = Loc.Detect(CultureInfo.CurrentUICulture);
+                var name = Loc.Load(code).GetValueOrDefault("newTheme") ?? T("newTheme");
+                Library = Library.CreateNew(name);
                 Persist();
             }
             ApplyLanguage(Library.Language);

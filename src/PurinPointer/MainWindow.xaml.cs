@@ -78,6 +78,7 @@ public partial class MainWindow : Window
     void Refresh()
     {
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(Refresh); return; }
+        if (_studio.Library.Current is null) return; // still loading
         _loading = true;
         try
         {
