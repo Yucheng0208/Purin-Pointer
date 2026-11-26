@@ -2,198 +2,312 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:PurinPointer"
-        Title="Purin Pointer" Width="1180" Height="780" MinWidth="1020" MinHeight="680"
-        WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Paper}" FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft JhengHei UI, Microsoft YaHei UI, Yu Gothic UI, Malgun Gothic"
-        FontSize="13" AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop" Closing="OnClosing">
-  <Grid Margin="20">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-      <RowDefinition Height="Auto" />
-    </Grid.RowDefinitions>
+        Title="Purin Pointer" Width="1180" Height="880" MinWidth="1060" MinHeight="760"
+        WindowStartupLocation="CenterScreen" Background="{DynamicResource Paper}"
+        FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft JhengHei UI, Microsoft YaHei UI, Yu Gothic UI, Malgun Gothic"
+        FontSize="13">
+  <Window.InputBindings>
+    <KeyBinding Key="Enter" Modifiers="Control" Command="{x:Static local:MainWindow.ApplyCommand}" />
+  </Window.InputBindings>
+  <Window.CommandBindings>
+    <CommandBinding Command="{x:Static local:MainWindow.ApplyCommand}" Executed="OnApply" />
+  </Window.CommandBindings>
 
-    <!-- Header -->
-    <DockPanel Margin="0,0,0,16">
-      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-        <TextBlock Text="{local:T lang.label}" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{StaticResource Muted}" />
-        <ComboBox x:Name="LanguageBox" Width="140" DisplayMemberPath="NativeName" SelectionChanged="OnLanguageChanged" />
-      </StackPanel>
-      <StackPanel>
-        <TextBlock Text="Purin Pointer" FontSize="26" FontWeight="Bold" Foreground="{StaticResource Accent}" />
-        <TextBlock Text="{local:T app.subtitle}" Foreground="{StaticResource Muted}" />
-      </StackPanel>
-    </DockPanel>
-
-    <Grid Grid.Row="1">
+  <Grid>
+    <Grid x:Name="Root">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="290" />
-        <ColumnDefinition Width="16" />
+        <ColumnDefinition Width="248" />
+        <ColumnDefinition Width="1" />
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
 
-      <!-- Pointer list -->
-      <Border Style="{StaticResource CardBorder}">
-        <DockPanel>
-          <TextBlock DockPanel.Dock="Top" Text="{local:T roles.header}" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
-          <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
-            <Button x:Name="ApplyButton" Style="{StaticResource PrimaryButton}" Click="OnApply">
-              <TextBlock Text="{local:T action.apply}" Foreground="White" />
-            </Button>
-            <Button x:Name="UndoButton" Click="OnUndo">
-              <TextBlock Text="{local:T action.undo}" />
-            </Button>
-            <Button Click="OnResetAll" Margin="0">
-              <TextBlock Text="{local:T action.reset}" />
+      <!-- ── Sidebar ─────────────────────────────────────────────── -->
+      <DockPanel Background="{DynamicResource Cream}">
+        <StackPanel DockPanel.Dock="Top" Margin="16,16,16,0">
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,18">
+            <TextBlock Text="&#xE962;" FontFamily="{StaticResource IconFont}" FontSize="22" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+            <StackPanel Margin="10,0,0,0">
+              <TextBlock Text="Purin Pointer" FontSize="17" FontWeight="Bold" />
+              <TextBlock x:Name="VersionText" FontSize="11" Foreground="{DynamicResource Muted}" />
+            </StackPanel>
+          </StackPanel>
+          <DockPanel Margin="0,0,0,10">
+            <Border DockPanel.Dock="Right" Background="{DynamicResource Card}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="12" Padding="2,0">
+              <StackPanel Orientation="Horizontal">
+                <Button x:Name="AddThemeButton" Style="{StaticResource IconButton}" Content="&#xE710;" Click="OnAddTheme" />
+                <Border Width="1" Height="14" Background="{DynamicResource Divider}" />
+                <Button x:Name="CopyThemeButton" Style="{StaticResource IconButton}" Content="&#xE8C8;" Click="OnCopyTheme" />
+                <Border Width="1" Height="14" Background="{DynamicResource Divider}" />
+                <Button x:Name="DeleteThemeButton" Style="{StaticResource IconButton}" Content="&#xE74D;" Click="OnDeleteTheme" />
+              </StackPanel>
+            </Border>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock x:Name="MyThemesText" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource Muted}" VerticalAlignment="Center" />
+              <Border Background="{DynamicResource Pill}" CornerRadius="8" Padding="6,0" Margin="6,0,0,0" VerticalAlignment="Center">
+                <TextBlock x:Name="ThemeCountText" FontSize="11" FontWeight="SemiBold" />
+              </Border>
+            </StackPanel>
+          </DockPanel>
+        </StackPanel>
+
+        <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
+          <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,14" />
+          <StackPanel x:Name="AutoSaveRow" Orientation="Horizontal" Margin="0,0,0,8" Background="Transparent">
+            <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="{DynamicResource Muted}" VerticalAlignment="Center" />
+            <TextBlock x:Name="AutoSaveText" FontSize="12" Foreground="{DynamicResource Muted}" Margin="6,0,0,0" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <Button x:Name="AboutButton" Style="{StaticResource LinkButton}" Click="OnAbout"><TextBlock x:Name="AboutText" FontSize="11" Foreground="{DynamicResource Accent}" /></Button>
+            <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource Muted}" />
+            <Button Style="{StaticResource LinkButton}" Click="OnGitHub"><TextBlock Text="GitHub" FontSize="11" Foreground="{DynamicResource Accent}" /></Button>
+            <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource Muted}" />
+            <Button x:Name="UpdateButton" Style="{StaticResource LinkButton}" Click="OnCheckUpdates">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE895;" FontFamily="{StaticResource IconFont}" FontSize="10" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+                <TextBlock x:Name="UpdateText" FontSize="11" Foreground="{DynamicResource Accent}" Margin="4,0,0,0" />
+              </StackPanel>
             </Button>
           </StackPanel>
-          <ListBox x:Name="RoleList" BorderThickness="0" Background="Transparent" SelectionChanged="OnRoleSelected"
-                   ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListBox.ItemTemplate>
-              <DataTemplate DataType="{x:Type local:RoleItem}">
-                <Grid Margin="2,4">
+        </StackPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,0">
+          <StackPanel x:Name="ThemeList" Margin="6,0" />
+        </ScrollViewer>
+      </DockPanel>
+
+      <Border Grid.Column="1" Background="{DynamicResource Divider}" />
+
+      <!-- ── Main ────────────────────────────────────────────────── -->
+      <DockPanel Grid.Column="2" Margin="26">
+        <!-- Header -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,18">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+            <Button x:Name="AppearanceButton" Style="{StaticResource MenuButton}" Click="OnOpenMenu">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE706;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+                <TextBlock x:Name="AppearanceText" Margin="6,0,4,0" VerticalAlignment="Center" />
+                <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="9" VerticalAlignment="Center" />
+              </StackPanel>
+              <Button.ContextMenu><ContextMenu x:Name="AppearanceMenu" /></Button.ContextMenu>
+            </Button>
+            <Button x:Name="LanguageButton" Style="{StaticResource MenuButton}" Click="OnOpenMenu" Margin="6,0,0,0">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE774;" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+                <TextBlock x:Name="LanguageText" Margin="6,0,4,0" VerticalAlignment="Center" />
+                <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="9" VerticalAlignment="Center" />
+              </StackPanel>
+              <Button.ContextMenu><ContextMenu x:Name="LanguageMenu" /></Button.ContextMenu>
+            </Button>
+          </StackPanel>
+          <StackPanel>
+            <TextBox x:Name="ThemeNameBox" FontSize="26" FontWeight="SemiBold" BorderThickness="0" Background="Transparent" Padding="0"
+                     TextChanged="OnThemeNameChanged">
+              <TextBox.Template>
+                <ControlTemplate TargetType="TextBox">
+                  <ScrollViewer x:Name="PART_ContentHost" />
+                </ControlTemplate>
+              </TextBox.Template>
+            </TextBox>
+            <TextBlock x:Name="SubtitleText" Foreground="{DynamicResource Muted}" Margin="0,8,0,0" />
+          </StackPanel>
+        </DockPanel>
+
+        <!-- Mode tabs -->
+        <Grid DockPanel.Dock="Top" Margin="0,0,0,18">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <UniformGrid x:Name="ModeTabs" Rows="1" />
+          <ToggleButton x:Name="MoreButton" Grid.Column="1" Style="{StaticResource RowToggle}" Padding="14,9" Margin="8,0,0,0" Click="OnMoreClicked">
+            <StackPanel Orientation="Horizontal">
+              <Grid Width="32" Height="32">
+                <local:AnimatedImage x:Name="MoreImage" Width="28" Height="28" />
+                <TextBlock x:Name="MoreIcon" Text="&#xE712;" FontFamily="{StaticResource IconFont}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Grid>
+              <TextBlock x:Name="MoreText" FontWeight="Medium" Margin="8,0,4,0" VerticalAlignment="Center" />
+              <TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}" FontSize="9" VerticalAlignment="Center" />
+            </StackPanel>
+            <ToggleButton.ContextMenu><ContextMenu x:Name="MoreMenu" Closed="OnMoreMenuClosed" /></ToggleButton.ContextMenu>
+          </ToggleButton>
+        </Grid>
+
+        <!-- Footer -->
+        <StackPanel DockPanel.Dock="Bottom">
+          <Border Height="1" Background="{DynamicResource Divider}" Margin="0,0,0,12" />
+          <DockPanel>
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+              <Button x:Name="NativeButton" Click="OnRestoreNative" Margin="0,0,10,0" Padding="14,8">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xE777;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" />
+                  <TextBlock x:Name="NativeText" Margin="6,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button x:Name="UndoButton" Click="OnUndo" Margin="0,0,10,0" Padding="14,8">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xE7A7;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center" />
+                  <TextBlock x:Name="UndoText" Margin="6,0,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button x:Name="ApplyButton" Style="{StaticResource PrimaryButton}" Click="OnApply" Padding="20,8">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource OnAccent}" VerticalAlignment="Center" />
+                  <TextBlock x:Name="ApplyText" Margin="6,0,0,0" Foreground="{DynamicResource OnAccent}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <TextBlock x:Name="StatusIcon" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+              <TextBlock x:Name="StatusText" FontSize="12" Foreground="{DynamicResource Muted}" Margin="10,0,16,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </DockPanel>
+        </StackPanel>
+
+        <!-- Editor -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,18">
+          <Border x:Name="EditorCard" CornerRadius="18" Padding="22" Background="{DynamicResource EditorCard}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="22" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+
+              <!-- Left: import, size, hotspot, background -->
+              <StackPanel>
+                <DockPanel>
+                  <Button x:Name="ClearButton" DockPanel.Dock="Right" Click="OnClearSlot" FontSize="12"><TextBlock x:Name="ClearText" FontSize="12" /></Button>
+                  <TextBlock x:Name="ImportHeading" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" />
+                </DockPanel>
+
+                <Grid Margin="0,16,0,0" Height="170">
+                  <Border x:Name="DropZone" CornerRadius="14" Background="{DynamicResource Cream}" AllowDrop="True"
+                          DragEnter="OnDropZoneDragEnter" DragOver="OnDropZoneDragOver" DragLeave="OnDropZoneDragLeave" Drop="OnDropZoneDrop" />
+                  <Rectangle RadiusX="14" RadiusY="14" Stroke="{DynamicResource Line}" StrokeThickness="1.2" StrokeDashArray="4 4" IsHitTestVisible="False" />
+                  <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="16,0">
+                    <TextBlock Text="&#xE896;" FontFamily="{StaticResource IconFont}" FontSize="24" Foreground="{DynamicResource Accent}" HorizontalAlignment="Center" IsHitTestVisible="False" />
+                    <TextBlock x:Name="DropHint" FontSize="14" FontWeight="Medium" TextAlignment="Center" Margin="0,9,0,0" IsHitTestVisible="False" />
+                    <TextBlock x:Name="DropDetail" Style="{StaticResource Hint}" TextAlignment="Center" Margin="0,6,0,0" MaxHeight="34" TextTrimming="CharacterEllipsis" IsHitTestVisible="False" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                      <Button Click="OnChooseFile" Padding="12,7"><TextBlock x:Name="ChooseText" /></Button>
+                      <TextBlock x:Name="IntervalLabel" FontSize="12" VerticalAlignment="Center" Margin="12,0,6,0" />
+                      <ComboBox x:Name="IntervalBox" Width="96" SelectionChanged="OnIntervalChanged" />
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+
+                <DockPanel Margin="0,16,0,0">
+                  <Button x:Name="PathImportButton" DockPanel.Dock="Right" Margin="10,0,0,0" Click="OnImportPath"><TextBlock x:Name="ImportText" /></Button>
+                  <Grid>
+                    <TextBox x:Name="PathBox" TextChanged="OnPathChanged" KeyDown="OnPathKeyDown" />
+                    <TextBlock x:Name="PathPlaceholder" Foreground="{DynamicResource Muted}" Margin="10,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False" TextWrapping="NoWrap" />
+                  </Grid>
+                </DockPanel>
+
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,16" />
+
+                <DockPanel>
+                  <TextBlock x:Name="SizeValue" DockPanel.Dock="Right" VerticalAlignment="Center" />
+                  <TextBlock x:Name="SizeHeading" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" />
+                </DockPanel>
+                <Slider x:Name="SizeSlider" Minimum="32" Maximum="256" TickFrequency="16" IsSnapToTickEnabled="True" Margin="0,12,0,0"
+                        ValueChanged="OnSizeSliding" PreviewMouseLeftButtonUp="OnSizeCommit" KeyUp="OnSizeCommit" />
+                <DockPanel Margin="0,10,0,0">
+                  <Button DockPanel.Dock="Left" Click="OnResetSize" FontSize="12" VerticalAlignment="Top"><TextBlock x:Name="ResetSizeText" FontSize="12" /></Button>
+                  <TextBlock x:Name="SizeHint" Style="{StaticResource Hint}" Margin="12,0,0,0" VerticalAlignment="Center" />
+                </DockPanel>
+
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,16" />
+
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Click="OnResetHotspot" x:Name="ResetHotspotButton"><TextBlock x:Name="ResetHotspotText" FontSize="12" /></Button>
+                  <TextBlock x:Name="HotspotHeading" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" />
+                </DockPanel>
+                <Grid x:Name="HotspotInputs" Margin="0,10,0,0">
                   <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="40" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <Border Width="36" Height="36" CornerRadius="6" Background="{StaticResource Checker}">
-                    <Image Source="{Binding Thumbnail}" Width="32" Height="32" RenderOptions.BitmapScalingMode="HighQuality" />
-                  </Border>
-                  <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" Margin="10,0,6,0" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
-                  <Border Grid.Column="2" CornerRadius="9" Padding="8,2" VerticalAlignment="Center">
-                    <Border.Style>
-                      <Style TargetType="Border">
-                        <Setter Property="Background" Value="#F3EEE8" />
-                        <Style.Triggers>
-                          <DataTrigger Binding="{Binding Highlight}" Value="True">
-                            <Setter Property="Background" Value="{StaticResource AccentSoft}" />
-                          </DataTrigger>
-                        </Style.Triggers>
-                      </Style>
-                    </Border.Style>
-                    <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{StaticResource Accent}" TextWrapping="NoWrap" />
-                  </Border>
+                  <TextBlock Text="X" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                  <TextBox x:Name="HotXBox" Grid.Column="1" LostFocus="OnHotspotTyped" KeyDown="OnHotspotKey" />
+                  <TextBlock Text="Y" Grid.Column="2" FontSize="12" VerticalAlignment="Center" Margin="12,0,8,0" />
+                  <TextBox x:Name="HotYBox" Grid.Column="3" LostFocus="OnHotspotTyped" KeyDown="OnHotspotKey" />
+                  <TextBlock Text="px" Grid.Column="4" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="8,0,0,0" />
                 </Grid>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-        </DockPanel>
-      </Border>
+                <TextBlock x:Name="HotspotHint" Style="{StaticResource Hint}" Margin="0,10,0,0" />
 
-      <!-- Editor -->
-      <Border Grid.Column="2" Style="{StaticResource CardBorder}">
-        <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="24" />
-            <ColumnDefinition Width="330" />
-          </Grid.ColumnDefinitions>
+                <Border Height="1" Background="{DynamicResource Divider}" Margin="0,16" />
 
-          <!-- Preview column -->
-          <DockPanel>
-            <StackPanel DockPanel.Dock="Top">
-              <TextBlock x:Name="RoleTitle" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock x:Name="SourceInfo" Style="{StaticResource Hint}" Margin="0,2,0,10" />
-              <StackPanel Orientation="Horizontal">
-                <Button Click="OnBrowseFiles" Margin="0,0,8,0">
-                  <TextBlock Text="{local:T import.browse}" />
-                </Button>
-                <Button Click="OnBrowseFolder" Margin="0">
-                  <TextBlock Text="{local:T import.folder}" />
-                </Button>
-              </StackPanel>
-            </StackPanel>
-
-            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,12,0,0">
-              <TextBlock Text="{local:T preview.actual}" Style="{StaticResource Hint}" VerticalAlignment="Center" Margin="0,0,10,0" />
-              <Border Background="{StaticResource Checker}" CornerRadius="6" Padding="6" BorderBrush="{StaticResource Line}" BorderThickness="1">
-                <Image x:Name="ActualImage" Stretch="None" RenderOptions.BitmapScalingMode="NearestNeighbor" />
-              </Border>
-            </StackPanel>
-
-            <!-- Large preview: 320 × 320 px regardless of the cursor size -->
-            <Border Margin="0,16,0,0" Width="340" Height="340" HorizontalAlignment="Left" VerticalAlignment="Top"
-                    CornerRadius="10" BorderBrush="{StaticResource Line}" BorderThickness="1" Background="{StaticResource Checker}">
-              <Grid Width="320" Height="320">
-                <Image x:Name="PreviewImage" Width="320" Height="320" RenderOptions.BitmapScalingMode="NearestNeighbor" />
-                <Canvas x:Name="HotspotLayer" IsHitTestVisible="False">
-                  <Line x:Name="HotH" Stroke="#E0563B" StrokeThickness="1" Opacity="0.85" />
-                  <Line x:Name="HotV" Stroke="#E0563B" StrokeThickness="1" Opacity="0.85" />
-                  <Ellipse x:Name="HotDot" Width="9" Height="9" Stroke="White" StrokeThickness="1.5" Fill="#E0563B" />
-                </Canvas>
-                <Border x:Name="ClickSurface" Background="Transparent" Cursor="Cross" MouseLeftButtonDown="OnPreviewClick" />
-                <TextBlock x:Name="EmptyHint" Text="{local:T import.drop}" TextAlignment="Center" Margin="30"
-                           VerticalAlignment="Center" Foreground="{StaticResource Muted}" IsHitTestVisible="False" />
-              </Grid>
-            </Border>
-          </DockPanel>
-
-          <!-- Settings column -->
-          <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-              <StackPanel x:Name="ProjectSettings">
-              <TextBlock Text="{local:T section.size}" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
-              <DockPanel>
-                <ComboBox x:Name="SizeBox" DockPanel.Dock="Right" Width="110" SelectionChanged="OnSizeChanged" />
-                <TextBlock Text="{local:T size.canvas}" VerticalAlignment="Center" />
-              </DockPanel>
-              <TextBlock Text="{local:T size.note}" Style="{StaticResource Hint}" Margin="0,8,0,10" />
-
-              <TextBlock Text="{local:T section.hotspot}" Style="{StaticResource SectionTitle}" />
-              <TextBlock Text="{local:T hotspot.hint}" Style="{StaticResource Hint}" Margin="0,0,0,8" />
-              <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{local:T hotspot.x}" VerticalAlignment="Center" Margin="0,0,6,0" />
-                <TextBox x:Name="HotXBox" Width="60" Padding="4,3" LostFocus="OnHotspotTyped" KeyDown="OnHotspotKey" />
-                <TextBlock Text="{local:T hotspot.y}" VerticalAlignment="Center" Margin="16,0,6,0" />
-                <TextBox x:Name="HotYBox" Width="60" Padding="4,3" LostFocus="OnHotspotTyped" KeyDown="OnHotspotKey" />
+                <DockPanel>
+                  <Button x:Name="RestoreOriginalButton" DockPanel.Dock="Right" Click="OnRestoreOriginal"><TextBlock x:Name="RestoreOriginalText" FontSize="12" /></Button>
+                  <TextBlock x:Name="BackgroundHeading" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" />
+                </DockPanel>
+                <StackPanel x:Name="BackgroundTools" Orientation="Horizontal" Margin="0,10,0,0">
+                  <Button Click="OnAutoRemove" Margin="0,0,10,0">
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="&#xE91B;" FontFamily="{StaticResource IconFont}" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock x:Name="AutoRemoveText" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Button>
+                  <ToggleButton x:Name="WandToggle" Click="OnWandClicked">
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="&#xE790;" FontFamily="{StaticResource IconFont}" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock x:Name="WandText" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </ToggleButton>
+                </StackPanel>
+                <DockPanel x:Name="ToleranceRow" Margin="0,10,0,0">
+                  <TextBlock x:Name="ToleranceLabel" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                  <TextBlock x:Name="ToleranceValue" DockPanel.Dock="Right" FontSize="12" Width="28" TextAlignment="Right" VerticalAlignment="Center" />
+                  <Slider x:Name="ToleranceSlider" Minimum="8" Maximum="160" Value="48" SmallChange="1" ValueChanged="OnToleranceChanged" />
+                </DockPanel>
+                <TextBlock x:Name="BackgroundHint" Style="{StaticResource Hint}" Margin="0,10,0,0" />
+                <TextBlock x:Name="ModeHint" Style="{StaticResource Hint}" Margin="0,14,0,0" />
               </StackPanel>
 
-              <TextBlock Text="{local:T section.speed}" Style="{StaticResource SectionTitle}" />
-              <DockPanel>
-                <TextBlock x:Name="SpeedValue" DockPanel.Dock="Right" Width="56" TextAlignment="Right" VerticalAlignment="Center" />
-                <TextBlock Text="{local:T speed.label}" VerticalAlignment="Center" />
-              </DockPanel>
-              <Slider x:Name="SpeedSlider" Minimum="-2" Maximum="2" Value="0" TickFrequency="0.25" IsSnapToTickEnabled="True"
-                      Margin="0,6,0,0" ValueChanged="OnSpeedChanged" />
-              <TextBlock x:Name="StaticHint" Text="{local:T speed.static}" Style="{StaticResource Hint}" />
-
-              <TextBlock Text="{local:T section.background}" Style="{StaticResource SectionTitle}" />
-              <Button Click="OnRemoveEdge">
-                <TextBlock Text="{local:T bg.auto}" />
-              </Button>
-              <ToggleButton x:Name="WandToggle" Padding="12,7" Margin="0,0,0,8" Checked="OnWandToggled" Unchecked="OnWandToggled">
-                <TextBlock Text="{local:T bg.wand}" />
-              </ToggleButton>
-              <TextBlock x:Name="WandHint" Text="{local:T bg.wand.hint}" Style="{StaticResource Hint}" Visibility="Collapsed" Margin="0,0,0,8" />
-              <DockPanel>
-                <TextBlock x:Name="ToleranceValue" DockPanel.Dock="Right" Width="40" TextAlignment="Right" />
-                <TextBlock Text="{local:T bg.tolerance}" />
-              </DockPanel>
-              <Slider x:Name="ToleranceSlider" Minimum="0" Maximum="128" Value="24" Margin="0,6,0,8" ValueChanged="OnToleranceChanged" />
-              <Button Click="OnRevertBackground">
-                <TextBlock Text="{local:T bg.revert}" />
-              </Button>
-
+              <!-- Right: preview -->
+              <StackPanel Grid.Column="2">
+                <DockPanel>
+                  <Border DockPanel.Dock="Right" Background="{DynamicResource Cream}" CornerRadius="10" Padding="8,4">
+                    <TextBlock x:Name="ActualSizeText" FontSize="11" Foreground="{DynamicResource Accent}" />
+                  </Border>
+                  <TextBlock x:Name="PreviewHeading" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <Border Margin="0,14,0,0" Height="310" CornerRadius="16" Background="{DynamicResource Card}" BorderBrush="{DynamicResource Divider}" BorderThickness="1" ClipToBounds="True">
+                  <Grid>
+                    <Border x:Name="PreviewChecker" CornerRadius="16" Background="{DynamicResource Checker}" Visibility="Collapsed" />
+                    <TextBlock x:Name="NoCursorText" Foreground="{DynamicResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <Grid x:Name="PreviewHost" HorizontalAlignment="Center" VerticalAlignment="Center" Background="Transparent"
+                          MouseLeftButtonDown="OnPreviewDown" MouseMove="OnPreviewMove" MouseLeftButtonUp="OnPreviewUp">
+                      <local:AnimatedImage x:Name="PreviewImage" Stretch="Fill" />
+                      <Canvas x:Name="HotMarker" IsHitTestVisible="False">
+                        <Path x:Name="HotCross" Stroke="{DynamicResource Accent}" StrokeThickness="1" />
+                      </Canvas>
+                    </Grid>
+                  </Grid>
+                </Border>
+                <CheckBox x:Name="ShowHotspotBox" Margin="0,14,0,0" IsChecked="True" Click="OnShowHotspotChanged">
+                  <TextBlock x:Name="ShowHotspotText" FontSize="12" />
+                </CheckBox>
+                <TextBlock x:Name="PreviewHint" Style="{StaticResource Hint}" Margin="0,14,0,0" />
               </StackPanel>
-              <Separator Margin="0,12" />
-              <Button Click="OnClearRole">
-                <TextBlock Text="{local:T action.clearRole}" />
-              </Button>
-
-              <TextBlock Text="{local:T system.size}" Style="{StaticResource SectionTitle}" />
-              <DockPanel>
-                <TextBlock x:Name="BaseSizeValue" DockPanel.Dock="Right" Width="56" TextAlignment="Right" VerticalAlignment="Center" />
-                <TextBlock Text="32 – 256 px" Style="{StaticResource Hint}" VerticalAlignment="Center" />
-              </DockPanel>
-              <Slider x:Name="BaseSizeSlider" Minimum="32" Maximum="256" TickFrequency="16" IsSnapToTickEnabled="True"
-                      Margin="0,6,0,0" ValueChanged="OnBaseSizeSliding" PreviewMouseLeftButtonUp="OnBaseSizeCommit" KeyUp="OnBaseSizeCommit" />
-            </StackPanel>
-          </ScrollViewer>
-        </Grid>
-      </Border>
+            </Grid>
+          </Border>
+        </ScrollViewer>
+      </DockPanel>
     </Grid>
 
-    <TextBlock x:Name="StatusText" Grid.Row="2" Margin="4,12,0,0" Foreground="{StaticResource Muted}" />
+    <!-- Busy overlay -->
+    <Grid x:Name="BusyOverlay" Background="{DynamicResource Overlay}" Visibility="Collapsed">
+      <Border Background="{DynamicResource Card}" CornerRadius="18" Padding="28" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel>
+          <ProgressBar IsIndeterminate="True" Width="160" Height="4" Foreground="{DynamicResource Accent}" Background="{DynamicResource Divider}" BorderThickness="0" />
+          <TextBlock x:Name="BusyText" Margin="0,12,0,0" HorizontalAlignment="Center" />
+        </StackPanel>
+      </Border>
+    </Grid>
   </Grid>
 </Window>

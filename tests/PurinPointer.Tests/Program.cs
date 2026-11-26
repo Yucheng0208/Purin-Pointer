@@ -126,36 +126,122 @@ var tests = new List<(string Name, Action Run)>
         Eq(0, (int)r.Alpha(0, 0), "corner cleared"); Eq(0, (int)r.Alpha(4, 3), "next to subject cleared");
         Eq(255, (int)r.Alpha(4, 4), "subject kept");
     }),
-    ("project hotspot follows the picture when the size changes", () =>
+    ("assets are normalised: padded, shrunk to 256 px, hotspot scaled", () =>
     {
-        var p = new CursorProject([new CursorFrame(Pattern(64, 64), 100)], "x", 32, 16);
-        p.CanvasSize = 32;
-        Eq((16, 8), p.CanvasHotspot, "scaled hotspot");
-        p.SetCanvasHotspot(4, 4);
-        p.CanvasSize = 128;
-        Eq((16, 16), p.CanvasHotspot, "re-scaled hotspot");
-        var (data, ext) = p.Encode();
-        Eq(".cur", ext, "still image becomes .cur");
-        Eq(16, IconReader.Read(data).HotspotX, "hotspot written");
+        var big = new AnimatedCursor([new CursorFrame(new Bitmap32(1024, 512), 100), new CursorFrame(new Bitmap32(10, 10), 100)], 1000, 500);
+        var n = AssetStore.Normalise(big);
+        True(n.Frames.All(f => f.Image.Width == 256 && f.Image.Height == 128), "all frames 256×128");
+        Eq(250, n.HotspotX, "hx"); Eq(125, n.HotspotY, "hy");
     }),
-    ("project encodes animations as .ani with speed applied", () =>
+    ("asset store saves, loads and collects unused files", () =>
     {
-        var p = new CursorProject([new CursorFrame(Pattern(32, 32, 1), 200), new CursorFrame(Pattern(32, 32, 2), 200)], "x") { Speed = 2 };
-        var (data, ext) = p.Encode();
-        Eq(".ani", ext, "ext");
-        var back = AniReader.Read(data);
-        Eq(2, back.Frames.Count, "frames"); Eq(100, back.Frames[0].DelayMs, "2x speed halves delay");
+        var root = Path.Combine(Path.GetTempPath(), "purin-test-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new AssetStore(root);
+            var frames = new List<CursorFrame> { new(Pattern(40, 30, 1), 120), new(Pattern(40, 30, 2), 80) };
+            var a = store.Save(new AnimatedCursor(frames, 3, 4));
+            var b = store.Save(new AnimatedCursor(frames, 0, 0));
+            var back = store.Load(a);
+            Eq(2, back.Frames.Count, "frames"); Eq(3, back.HotspotX, "hx"); Eq(40, back.Frames[0].Image.Width, "w");
+            var lib = Library.CreateNew("t");
+            lib.Current!.Slot(CursorModes.Arrow).Asset = a;
+            store.CollectGarbage(lib);
+            True(File.Exists(store.FullPath(a)), "kept referenced asset");
+            True(!File.Exists(store.FullPath(b)), "removed unreferenced asset");
+        }
+        finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
     }),
-    ("large imports are shrunk with the hotspot", () =>
+    ("library round-trips through JSON and keeps every slot", () =>
     {
-        var p = new CursorProject([new CursorFrame(new Bitmap32(1024, 512), 100)], "big", 1000, 500);
-        Eq(512, p.SourceWidth, "w"); Eq(256, p.SourceHeight, "h");
-        Eq(500.0, p.HotspotX, "hx");
+        var lib = Library.CreateNew("Theme");
+        var p = lib.Current!;
+        p.Slot(CursorModes.Wait).Asset = "assets/x.ani";
+        p.Slot(CursorModes.Wait).Hotspot = [0.5, 0.25];
+        p.Slot("Help").Asset = "assets/y.ani";
+        lib.Language = "ja"; lib.Appearance = "dark"; lib.InUse = p.Id;
+        var back = Library.Deserialize(lib.Serialize());
+        Eq(p.Id, back.Selected, "selected");
+        Eq(16, back.Current!.Slots.Count, "4 main + 12 extra slots");
+        Eq(0.25, back.Current.Slot(CursorModes.Wait).Hotspot![1], "hotspot");
+        Eq(1, back.Current.FilledMain, "main filled"); Eq(1, back.Current.FilledExtra, "extra filled");
+        Eq("ja", back.Language, "language"); Eq("dark", back.Appearance, "appearance");
+        True(back.Current.SameAs(p), "content equality");
+        Throws<InvalidDataException>(() => Library.Deserialize("{\"Profiles\":[]}"));
     }),
-    ("mixed frame sizes are padded to the largest", () =>
+    ("add, duplicate and remove themes", () =>
     {
-        var p = new CursorProject([new CursorFrame(new Bitmap32(10, 10), 100), new CursorFrame(new Bitmap32(20, 16), 100)], "x");
-        True(p.Frames.All(f => f.Image.Width == 20 && f.Image.Height == 16), "same size");
+        var lib = Library.CreateNew("A");
+        lib.Current!.Slot(CursorModes.Arrow).Asset = "assets/a.ani";
+        lib.Add("New", copyCurrent: true, copySuffix: "copy");
+        Eq(2, lib.Profiles.Count, "two themes");
+        Eq("A copy", lib.Current!.Name, "copy name");
+        Eq("assets/a.ani", lib.Current.Slot(CursorModes.Arrow).Asset, "copied slots");
+        True(lib.Current.Id != lib.Profiles[0].Id, "new id");
+        lib.BackupsByTheme[lib.Current.Id] = "backups/x.json";
+        lib.InUse = lib.Current.Id;
+        Eq("backups/x.json", lib.RemoveSelected(), "returns backup to delete");
+        Eq(1, lib.Profiles.Count, "one left"); Eq(null, lib.InUse, "in-use cleared");
+        Eq(null, lib.RemoveSelected(), "never removes the last theme");
+    }),
+    ("an edit records undo and drops the apply backup", () =>
+    {
+        var lib = Library.CreateNew("A");
+        var p = lib.Current!;
+        lib.BackupsByTheme[p.Id] = "backups/a.json";
+        p.Slot(CursorModes.Text).Asset = "assets/before.ani";
+        Eq("backups/a.json", lib.RecordEditUndo(p), "backup returned");
+        p.Slot(CursorModes.Text).Asset = "assets/after.ani";
+        Eq("assets/before.ani", lib.UndoProfiles[p.Id].Slot(CursorModes.Text).Asset, "undo keeps the old state");
+        True(lib.ReferencedAssets().Contains("assets/before.ani"), "undo state keeps its asset alive");
+    }),
+    ("wait mode writes both Windows busy pointers", () =>
+    {
+        Eq("Wait,AppStarting", string.Join(",", CursorModes.Roles(CursorModes.Wait).Select(r => r.RegistryName)), "wait roles");
+        Eq("Hand", CursorModes.Roles(CursorModes.Pointing)[0].RegistryName, "pointing");
+        Eq("IBeam", CursorModes.Roles(CursorModes.Text)[0].RegistryName, "text");
+        var covered = CursorModes.All.SelectMany(CursorModes.Roles).Select(r => r.RegistryName).OrderBy(x => x).ToList();
+        Eq(string.Join(",", CursorRole.All.Select(r => r.RegistryName).OrderBy(x => x)), string.Join(",", covered), "every Windows pointer reachable once");
+    }),
+    ("image imports use AniOnMac's default hotspots", () =>
+    {
+        var frames = new List<CursorFrame> { new(new Bitmap32(21, 11), 100) };
+        var wait = CursorOps.FromFrames(frames, CursorModes.Wait);
+        Eq(10, wait.HotspotX, "wait centred x"); Eq(5, wait.HotspotY, "wait centred y");
+        var arrow = CursorOps.FromFrames(frames, CursorModes.Arrow);
+        Eq(0, arrow.HotspotX, "arrow top-left");
+    }),
+    ("export places the hotspot on the canvas", () =>
+    {
+        var asset = new AnimatedCursor([new CursorFrame(Pattern(64, 32), 100)], 0, 0);
+        var slot = new Slot { Key = CursorModes.Arrow, Asset = "x", Hotspot = [0.5, 0.5] };
+        var (data, ext) = CursorOps.Export(slot, asset, 128);
+        Eq(".cur", ext, "still → cur");
+        var cur = IconReader.Read(data);
+        Eq(128, cur.Image.Width, "canvas");
+        Eq(64, cur.HotspotX, "x"); Eq(64, cur.HotspotY, "y (image letterboxed 32 px down)");
+        var anim = new AnimatedCursor([new CursorFrame(Pattern(32, 32, 1), 100), new CursorFrame(Pattern(32, 32, 2), 200)], 4, 8);
+        var (aniData, aniExt) = CursorOps.Export(new Slot { Key = CursorModes.Wait, Asset = "x" }, anim, 64);
+        Eq(".ani", aniExt, "animation → ani");
+        var back = AniReader.Read(aniData);
+        Eq(8, back.HotspotX, "file hotspot scaled ×2"); Eq(200, back.Frames[1].DelayMs, "timing kept");
+        Eq(64, CursorOps.CanvasFor(32), "canvas for 32 px"); Eq(256, CursorOps.CanvasFor(256), "capped at 256");
+    }),
+    ("knockout removes background on every frame and reports it", () =>
+    {
+        Bitmap32 Solid() { var b = new Bitmap32(6, 6); for (int i = 0; i < b.Pixels.Length; i += 4) { b.Pixels[i + 1] = 255; b.Pixels[i + 3] = 255; } return b; }
+        var src = new AnimatedCursor([new CursorFrame(Solid(), 100), new CursorFrame(Solid(), 100)], 0, 0);
+        var (wand, removed) = CursorOps.Knockout(src, (0.1, 0.1), 10);
+        Eq(72, removed, "all 36 pixels × 2 frames");
+        True(wand.Frames.All(f => f.Image.IsEmpty()), "both frames cleared");
+        var (_, none) = CursorOps.Knockout(wand, (0.5, 0.5), 10);
+        Eq(0, none, "nothing left to remove");
+    }),
+    ("update check compares versions numerically", () =>
+    {
+        True(Versions.IsNewer("v0.2.0", "0.1.9"), "minor");
+        True(Versions.IsNewer("v0.10.0", "0.9.0"), "numeric not lexical");
+        True(!Versions.IsNewer("v0.1.0", "0.1.0"), "same");
     }),
     ("natural sort puts 2 before 10", () =>
     {
@@ -174,7 +260,7 @@ var tests = new List<(string Name, Action Run)>
             foreach (var (k, v) in en)
                 Eq(Placeholders(v), Placeholders(t[k]), $"{lang.Code}:{k} placeholders");
         }
-        foreach (var role in CursorRole.All) True(en.ContainsKey(role.NameKey), $"name for {role.RegistryName}");
+        foreach (var key in CursorModes.All) True(en.ContainsKey(CursorModes.NameKey(key)), $"name for {key}");
     }),
     ("system language detection", () =>
     {

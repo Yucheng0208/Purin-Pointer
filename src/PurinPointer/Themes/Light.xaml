@@ -1,0 +1,33 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Light. Colours match AniOnMac's adaptive palette (Studio.swift). -->
+  <SolidColorBrush x:Key="Paper" Color="#FAFAF7" />        <!-- canvas: main background -->
+  <SolidColorBrush x:Key="Cream" Color="#FCF7ED" />        <!-- sidebar, drop zone -->
+  <SolidColorBrush x:Key="Card" Color="#FFFFFF" />         <!-- surface: cards, buttons -->
+  <SolidColorBrush x:Key="Ink" Color="#424247" />
+  <SolidColorBrush x:Key="Muted" Color="#86868B" />
+  <SolidColorBrush x:Key="Accent" Color="#BD6321" />
+  <SolidColorBrush x:Key="AccentHover" Color="#D9BD6321" />
+  <SolidColorBrush x:Key="AccentPressed" Color="#A64A14" />
+  <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="AccentSoft" Color="#FFDEAB" /> <!-- apricot: hover / selection -->
+  <SolidColorBrush x:Key="Hover" Color="#FFDEAB" />
+  <SolidColorBrush x:Key="Pressed" Color="#F5AD63" />
+  <SolidColorBrush x:Key="Selected" Color="#A6FFDEAB" />
+  <SolidColorBrush x:Key="Line" Color="#40BD6321" />
+  <SolidColorBrush x:Key="Custard" Color="#B3BD6321" />
+  <SolidColorBrush x:Key="Divider" Color="#1F000000" />
+  <SolidColorBrush x:Key="Field" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="Pill" Color="#A6FFDEAB" />
+  <SolidColorBrush x:Key="Overlay" Color="#66000000" />
+  <SolidColorBrush x:Key="EditorCard" Color="#B3FFFFFF" />  <!-- surface at 70 % -->
+  <SolidColorBrush x:Key="Warning" Color="#E8912D" />
+  <DrawingBrush x:Key="Checker" TileMode="Tile" Viewport="0,0,20,20" ViewportUnits="Absolute">
+    <DrawingBrush.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Brush="#FFFFFF" Geometry="M0,0 H2 V2 H0 Z" />
+        <GeometryDrawing Brush="#EBEBEB" Geometry="M0,0 H1 V1 H0 Z M1,1 H2 V2 H1 Z" />
+      </DrawingGroup>
+    </DrawingBrush.Drawing>
+  </DrawingBrush>
+</ResourceDictionary>

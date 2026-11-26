@@ -5,78 +5,41 @@ using PurinPointer.Core;
 
 namespace PurinPointer;
 
-/// <summary>Turns files the user picks or drops into a <see cref="CursorProject"/>, using WPF's
-/// built-in image codecs (PNG, JPEG, BMP, GIF, TIFF, ICO and any WIC codec Windows has, e.g. WebP).</summary>
+/// <summary>Image decoding with WPF's built-in codecs (PNG, JPEG, BMP, GIF, TIFF, ICO and any
+/// WIC codec Windows has installed, e.g. WebP or HEIC).</summary>
 public static class ImageLoader
 {
-    static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".ico", ".cur"];
-    static readonly string[] AllExtensions = [.. ImageExtensions, ".ani"];
+    public static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic"];
+    public static readonly string[] CursorExtensions = [".ani", ".cur", ".ico"];
 
     public static string DialogFilter(string label) =>
-        $"{label}|{string.Join(";", AllExtensions.Select(e => "*" + e))}";
+        $"{label}|{string.Join(";", CursorExtensions.Concat(ImageExtensions).Select(e => "*" + e))}";
 
-    public static bool IsSupported(string path) =>
-        AllExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+    public static bool IsImage(string path) => ImageExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+    public static bool IsCursor(string path) => CursorExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
-    public static CursorProject Load(IReadOnlyList<string> paths)
+    /// <summary>Image files from the given files and folders, in Explorer order (1, 2, … 10).</summary>
+    public static List<string> ImageFrames(IEnumerable<string> paths) =>
+        paths.SelectMany(p => Directory.Exists(p) ? Directory.GetFiles(p).Where(IsImage) : IsImage(p) ? [p] : Array.Empty<string>())
+             .OrderBy(Path.GetFileName, NaturalStringComparer.Instance)
+             .ToList();
+
+    /// <summary>Reads an .ani, .cur or .ico file.</summary>
+    public static AnimatedCursor ReadCursorFile(string path)
     {
-        // A dropped folder means "these images, in file-name order".
-        var files = paths.SelectMany(p => Directory.Exists(p)
-                ? Directory.GetFiles(p).Where(f => ImageExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
-                : [p])
-            .Where(IsSupported)
-            .OrderBy(Path.GetFileName, NaturalStringComparer.Instance)
-            .ToList();
-        if (files.Count == 0) throw new InvalidDataException(Loc.Instance["import.none"]);
-
-        string name = paths.Count == 1 ? Path.GetFileName(paths[0].TrimEnd('\\', '/')) : $"{files.Count} files";
-
-        if (files.Count == 1)
-        {
-            var file = files[0];
-            var bytes = File.ReadAllBytes(file);
-            switch (Path.GetExtension(file).ToLowerInvariant())
-            {
-                case ".ani":
-                    var ani = AniReader.Read(bytes, Decode);
-                    return new CursorProject(ani.Frames, name, ani.HotspotX, ani.HotspotY);
-                case ".cur":
-                case ".ico":
-                    var cur = IconReader.Read(bytes, Decode);
-                    return new CursorProject([new CursorFrame(cur.Image, 100)], name, cur.HotspotX, cur.HotspotY);
-                case ".gif":
-                    return new CursorProject(LoadGif(bytes), name);
-                default:
-                    return new CursorProject([new CursorFrame(Decode(bytes) ?? throw Unreadable(file), 100)], name);
-            }
-        }
-
-        // Several files: one frame each, 100 ms apiece; the speed slider adjusts them together.
-        var frames = new List<CursorFrame>();
-        foreach (var file in files)
-        {
-            var bytes = File.ReadAllBytes(file);
-            var ext = Path.GetExtension(file).ToLowerInvariant();
-            var image = ext is ".cur" or ".ico" ? IconReader.Read(bytes, Decode).Image : Decode(bytes) ?? throw Unreadable(file);
-            frames.Add(new CursorFrame(image, 100));
-        }
-        return new CursorProject(frames, name);
+        var bytes = File.ReadAllBytes(path);
+        if (Path.GetExtension(path).Equals(".ani", StringComparison.OrdinalIgnoreCase)) return AniReader.Read(bytes, Decode);
+        var cur = IconReader.Read(bytes, Decode);
+        return new AnimatedCursor([new CursorFrame(cur.Image, 100)], cur.HotspotX, cur.HotspotY);
     }
 
-    /// <summary>Reads a cursor file for the small preview in the pointer list.</summary>
-    public static Bitmap32? Thumbnail(string path)
+    /// <summary>Frames for an image import: an animated GIF keeps its own frames and timing;
+    /// several stills become one frame each, <paramref name="intervalMs"/> apart.</summary>
+    public static List<CursorFrame> ReadImageFrames(IReadOnlyList<string> files, int intervalMs)
     {
-        try
-        {
-            var bytes = File.ReadAllBytes(path);
-            return Path.GetExtension(path).Equals(".ani", StringComparison.OrdinalIgnoreCase)
-                ? AniReader.Read(bytes, Decode).Frames[0].Image
-                : IconReader.Read(bytes, Decode).Image;
-        }
-        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
-        {
-            return null;
-        }
+        if (files.Count == 1 && Path.GetExtension(files[0]).Equals(".gif", StringComparison.OrdinalIgnoreCase))
+            return LoadGif(File.ReadAllBytes(files[0]));
+        return files.Select(f => new CursorFrame(Decode(File.ReadAllBytes(f)) ?? throw new InvalidDataException(Path.GetFileName(f)), intervalMs)).ToList();
     }
 
     /// <summary>Decodes the first frame of any image WPF understands into straight-alpha BGRA.</summary>
@@ -112,7 +75,6 @@ public static class ImageLoader
             height = Math.Max(height, top + patch.Height);
         }
 
-        // Prefer the GIF's logical screen size when Windows exposes it.
         try
         {
             if (decoder.Metadata is BitmapMetadata m)
@@ -147,5 +109,31 @@ public static class ImageLoader
         return src;
     }
 
-    static InvalidDataException Unreadable(string file) => new($"{Path.GetFileName(file)}: unsupported image.");
+    /// <summary>A small thumbnail straight from an image file (for the timeline).</summary>
+    public static BitmapSource? Thumbnail(string path, int width)
+    {
+        try
+        {
+            var img = new BitmapImage();
+            img.BeginInit();
+            img.CacheOption = BitmapCacheOption.OnLoad;
+            img.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+            img.DecodePixelWidth = width;
+            img.UriSource = new Uri(path);
+            img.EndInit();
+            img.Freeze();
+            return img;
+        }
+        catch (Exception e) when (e is NotSupportedException or IOException or FileFormatException or ArgumentException) { return null; }
+    }
+}
+
+/// <summary>A decoded cursor ready to show: frames in play order with their durations.</summary>
+public sealed record PreviewFrames(IReadOnlyList<BitmapSource> Images, IReadOnlyList<int> Delays, AnimatedCursor Cursor)
+{
+    public int Width => Cursor.Frames[0].Image.Width;
+    public int Height => Cursor.Frames[0].Image.Height;
+
+    public static PreviewFrames From(AnimatedCursor c) =>
+        new(c.Frames.Select(f => ImageLoader.ToBitmapSource(f.Image)).ToList(), c.Frames.Select(f => Math.Max(16, f.DelayMs)).ToList(), c);
 }

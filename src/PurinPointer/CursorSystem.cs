@@ -12,6 +12,8 @@ public sealed class CursorSnapshot
     public Dictionary<string, string> Values { get; set; } = [];
     public string? SchemeName { get; set; }
     public int? SchemeSource { get; set; }
+    /// <summary>The pointer size (CursorBaseSize); null in backups made before it was recorded.</summary>
+    public int? BaseSize { get; set; }
 }
 
 /// <summary>
@@ -29,6 +31,8 @@ public static class CursorSystem
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PurinPointer");
     public static string CursorDir => Path.Combine(DataDir, "cursors");
     public static string BackupDir => Path.Combine(DataDir, "backups");
+    /// <summary>Pointer settings from just before the last "Restore Windows appearance".</summary>
+    public static string RecoveryFile => Path.Combine(DataDir, "native-reset-recovery.json");
 
     static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
 
@@ -39,6 +43,7 @@ public static class CursorSystem
         {
             SchemeName = key.GetValue("") as string,
             SchemeSource = key.GetValue("Scheme Source") is int s ? s : null,
+            BaseSize = key.GetValue("CursorBaseSize") is int b ? b : null,
         };
         foreach (var role in CursorRole.All)
             snap.Values[role.RegistryName] =
@@ -64,61 +69,83 @@ public static class CursorSystem
     }
 
     /// <summary>Saves a new cursor file into the app's data folder and returns its path.</summary>
-    public static string StoreCursorFile(CursorRole role, byte[] data, string extension)
+    public static string StoreCursorFile(string name, byte[] data, string extension)
     {
         Directory.CreateDirectory(CursorDir);
-        var path = Path.Combine(CursorDir, $"{role.RegistryName}-{DateTime.Now:yyyyMMdd-HHmmss-fff}{extension}");
+        var path = Path.Combine(CursorDir, $"{name}-{Guid.NewGuid():N}{extension}");
         File.WriteAllBytes(path, data);
         return path;
     }
 
     /// <summary>
-    /// Applies the changes (role → file path, or null for the Windows default), after backing up
-    /// the current state so it can be undone.
+    /// Writes the given pointers (role → file path) and leaves every other pointer as it is,
+    /// like AniOnMac's "only the filled modes are applied".
     /// </summary>
-    public static void Apply(IReadOnlyDictionary<CursorRole, string?> changes)
+    public static void ApplyRoles(IReadOnlyDictionary<CursorRole, string> changes)
     {
         var before = ReadCurrent();
-        SaveBackup(before);
-
         var values = new Dictionary<string, string>(before.Values);
-        foreach (var (role, path) in changes)
-            values[role.RegistryName] = path ?? role.DefaultValue;
-
-        bool allDefault = CursorRole.All.All(r =>
-            string.Equals(values[r.RegistryName], r.DefaultValue, StringComparison.OrdinalIgnoreCase));
-
-        if (allDefault)
-        {
-            Write(new CursorSnapshot { Values = values, SchemeName = "Windows Default", SchemeSource = 2 });
-        }
-        else
-        {
-            Write(new CursorSnapshot { Values = values, SchemeName = SchemeName, SchemeSource = 1 });
-            // Also save it as a named scheme so it shows up in the classic Mouse Properties dialog.
-            using var schemes = Registry.CurrentUser.CreateSubKey(SchemesKey);
-            schemes.SetValue(SchemeName, string.Join(",", CursorRole.All.Select(r => values[r.RegistryName])),
-                             RegistryValueKind.ExpandString);
-        }
-        CleanUpFiles();
+        foreach (var (role, path) in changes) values[role.RegistryName] = path;
+        Write(new CursorSnapshot { Values = values, SchemeName = SchemeName, SchemeSource = 1, BaseSize = before.BaseSize });
+        // Also save it as a named scheme so it shows up in the classic Mouse Properties dialog.
+        using var schemes = Registry.CurrentUser.CreateSubKey(SchemesKey);
+        schemes.SetValue(SchemeName, string.Join(",", CursorRole.All.Select(r => values[r.RegistryName])), RegistryValueKind.ExpandString);
     }
 
-    public static void ResetAll() => Apply(CursorRole.All.ToDictionary(r => r, r => (string?)null));
-
-    /// <summary>Restores the most recent backup. Returns false when there is none.</summary>
-    public static bool UndoLast()
+    /// <summary>
+    /// Puts every pointer back to the "Windows Default" scheme and the pointer size back to 32 px,
+    /// like Mouse Properties › Pointers › "Use Default" plus the accessibility size slider.
+    /// </summary>
+    public static void ResetToDefaults()
     {
-        var latest = Backups().FirstOrDefault();
-        if (latest is null) return false;
-        var snap = JsonSerializer.Deserialize<CursorSnapshot>(File.ReadAllText(latest));
-        if (snap is null) { File.Delete(latest); return false; }
-        Write(snap);
-        File.Delete(latest);
-        CleanUpFiles();
-        return true;
+        var defaults = SystemDefaults();
+        Write(new CursorSnapshot
+        {
+            Values = CursorRole.All.ToDictionary(r => r.RegistryName, r => defaults[r]),
+            SchemeName = "Windows Default",
+            SchemeSource = 2,
+            BaseSize = 32,
+        });
     }
 
-    public static bool HasBackup => Backups().Any();
+    public static void SaveSnapshot(CursorSnapshot snap, string path)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, JsonSerializer.Serialize(snap, Json));
+    }
+
+    /// <summary>Writes a saved snapshot back to Windows.</summary>
+    public static void Restore(string path)
+    {
+        var snap = JsonSerializer.Deserialize<CursorSnapshot>(File.ReadAllText(path))
+            ?? throw new InvalidDataException("The backup is empty.");
+        Write(snap);
+    }
+
+    /// <summary>
+    /// The default scheme as this copy of Windows defines it (HKLM … Cursors\Schemes\"Windows Default"),
+    /// falling back to the standard Aero files for any entry that is missing or points nowhere.
+    /// </summary>
+    public static Dictionary<CursorRole, string> SystemDefaults()
+    {
+        var result = CursorRole.All.ToDictionary(r => r, r => r.DefaultValue);
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Control Panel\Cursors\Schemes");
+            if (key?.GetValue("Windows Default", null, RegistryValueOptions.DoNotExpandEnvironmentNames) is string scheme)
+            {
+                var parts = scheme.Split(',');
+                for (int i = 0; i < Math.Min(parts.Length, CursorRole.All.Count); i++)
+                {
+                    var v = parts[i].Trim();
+                    if (v.Length == 0 || File.Exists(Environment.ExpandEnvironmentVariables(v)))
+                        result[CursorRole.All[i]] = v;
+                }
+            }
+        }
+        catch (Exception e) when (e is System.Security.SecurityException or UnauthorizedAccessException or IOException) { }
+        return result;
+    }
 
     /// <summary>The pointer size from Settings › Accessibility › Mouse pointer (32–256 px).</summary>
     public static int GetBaseSize()
@@ -135,7 +162,7 @@ public static class CursorSystem
         Reload();
     }
 
-    static void Write(CursorSnapshot snap)
+    public static void Write(CursorSnapshot snap)
     {
         using (var key = Registry.CurrentUser.CreateSubKey(CursorsKey))
         {
@@ -144,6 +171,7 @@ public static class CursorSystem
                              RegistryValueKind.ExpandString);
             key.SetValue("", snap.SchemeName ?? "", RegistryValueKind.String);
             if (snap.SchemeSource is int src) key.SetValue("Scheme Source", src, RegistryValueKind.DWord);
+            if (snap.BaseSize is int size) key.SetValue("CursorBaseSize", size, RegistryValueKind.DWord);
         }
         Reload();
     }
@@ -155,20 +183,8 @@ public static class CursorSystem
             throw new InvalidOperationException($"Windows refused to reload the cursors (error {Marshal.GetLastWin32Error()}).");
     }
 
-    static void SaveBackup(CursorSnapshot snap)
-    {
-        Directory.CreateDirectory(BackupDir);
-        File.WriteAllText(Path.Combine(BackupDir, $"{DateTime.Now:yyyyMMdd-HHmmss-fff}.json"), JsonSerializer.Serialize(snap, Json));
-        foreach (var old in Backups().Skip(30)) File.Delete(old);
-    }
-
-    static IEnumerable<string> Backups() =>
-        Directory.Exists(BackupDir)
-            ? Directory.GetFiles(BackupDir, "*.json").OrderByDescending(f => Path.GetFileName(f), StringComparer.Ordinal)
-            : [];
-
-    /// <summary>Deletes cursor files that neither the registry nor any backup refers to.</summary>
-    static void CleanUpFiles()
+    /// <summary>Deletes applied cursor files that neither the registry nor any saved snapshot refers to.</summary>
+    public static void CleanUpFiles()
     {
         if (!Directory.Exists(CursorDir)) return;
         var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -176,13 +192,16 @@ public static class CursorSystem
         {
             if (s is null) return;
             foreach (var v in s.Values.Values)
-                if (!string.IsNullOrWhiteSpace(v)) used.Add(Path.GetFullPath(Environment.ExpandEnvironmentVariables(v.Trim('"'))));
+                if (!string.IsNullOrWhiteSpace(v))
+                    try { used.Add(Path.GetFullPath(Environment.ExpandEnvironmentVariables(v.Trim('"')))); } catch (ArgumentException) { }
         }
         Add(ReadCurrent());
-        foreach (var b in Backups())
+        var snapshots = Directory.Exists(BackupDir) ? Directory.GetFiles(BackupDir, "*.json").ToList() : [];
+        if (File.Exists(RecoveryFile)) snapshots.Add(RecoveryFile);
+        foreach (var b in snapshots)
         {
             try { Add(JsonSerializer.Deserialize<CursorSnapshot>(File.ReadAllText(b))); }
-            catch (JsonException) { }
+            catch (Exception e) when (e is JsonException or IOException) { }
         }
         foreach (var file in Directory.GetFiles(CursorDir))
             if (!used.Contains(Path.GetFullPath(file)))
@@ -196,24 +215,4 @@ public static class CursorSystem
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
-}
-
-/// <summary>Small persisted preferences.</summary>
-public sealed class AppSettings
-{
-    public string? Language { get; set; }
-
-    static string FilePath => Path.Combine(CursorSystem.DataDir, "settings.json");
-
-    public static AppSettings Load()
-    {
-        try { return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath)) ?? new(); }
-        catch (Exception e) when (e is IOException or JsonException or UnauthorizedAccessException) { return new(); }
-    }
-
-    public void Save()
-    {
-        Directory.CreateDirectory(CursorSystem.DataDir);
-        File.WriteAllText(FilePath, JsonSerializer.Serialize(this));
-    }
 }

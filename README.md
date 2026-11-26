@@ -1,18 +1,21 @@
 # Purin Pointer
 
-**Animated cursor studio for Windows** — import `.ani`, `.cur`, PNG, GIF or a folder of images, remove the background, set size and hotspot, and apply it as your Windows pointer.
+**Animated cursor studio for Windows** — the Windows edition of AniOnMac. Import `.ani`, `.cur`, PNG, GIF or a folder of images, remove the background in one click, tune the hotspot and make the cursor truly yours.
 
 [繁體中文](README.tw.md) · English
 
 ## Features
 
-- **Any source** — Windows `.ani` / `.cur` / `.ico`, a single PNG/JPG/BMP, animated GIF, or a folder of numbered images (sorted like Explorer: `2.png` before `10.png`).
-- **All 17 Windows pointers** — Normal Select, Link Select, Text Select, Busy, Working in Background and the rest.
-- **Background removal** — remove a flat edge background, or use the magic wand to erase a clicked colour (applied to every frame).
-- **Hotspot** — click the preview or type X/Y.
-- **Speed** — 0.25× to 4× for animations.
-- **Undo** — every apply is backed up; *Undo last apply* restores the previous state. *Reset all* returns to the Windows default scheme.
-- **Five languages** — 繁體中文, 简体中文, English, 日本語, 한국어 (follows the system language by default).
+- **Themes** — as many as you like; add, duplicate and delete them in the sidebar. The applied theme is tagged *In use*, and everything saves automatically.
+- **4 modes + more pointers** — Normal, Link, Text and Busy (Busy drives both Windows' *Busy* and *Working in Background*); the other 12 Windows pointers live under *More pointers*. Only filled modes are applied; the rest stay as they are.
+- **Any source** — `.ani` / `.cur` / `.ico`, a single PNG/JPG/BMP, an animated GIF, or a folder of numbered images (sorted like Explorer: `2.png` before `10.png`), or paste a path.
+- **Timeline** — several images open on a timeline first: drag to reorder, nudge with ◀ ▶, drop frames with ✕, set the frame time and preview live.
+- **Background removal** — *Auto remove* clears the background colour touching the edges; the *magic wand* erases a clicked colour on every frame; *Restore original* undoes it.
+- **Hotspot** — drag it on the preview or type X/Y.
+- **Windows pointer size** — the same global size as Settings › Accessibility › Mouse pointer (32–256 px).
+- **Undo** — *Undo last change* goes back to before the last apply or edit; *Restore Windows appearance* puts every pointer and the size back to the defaults.
+- **Appearance and language** — follow system / light / dark (pudding colours); 繁體中文, 简体中文, English, 日本語, 한국어.
+- **Update check** — compares with the latest release on GitHub.
 - **No administrator rights** — pointer settings are per-user (`HKCU\Control Panel\Cursors`), so there is no UAC prompt.
 
 ## Download and run
@@ -45,16 +48,18 @@ To release: run the `dotnet publish` command above (use `-r win-arm64` for ARM),
 
 | Path | Contents |
 | --- | --- |
-| `cursors\` | Generated `.cur` / `.ani` files the registry points to |
-| `backups\` | Pointer settings from before each apply (used by *Undo*) |
-| `settings.json` | Language |
+| `library.json` | Themes, language, appearance and the theme in use |
+| `assets\` | Copies of imported cursors (the originals can be moved or deleted) |
+| `cursors\` | `.cur` / `.ani` files written on apply; the registry points here |
+| `backups\` | Each theme's pointer settings from before it was applied (used by *Undo last change*) |
+| `native-reset-recovery.json` | Pointer settings from before the last *Restore Windows appearance* |
 
 ## Project layout
 
 ```text
 PurinPointer.sln
-src/PurinPointer.Core/     # cursor formats, image processing, strings (cross-platform, no WPF)
-src/PurinPointer/          # WPF app: UI, image decoding, registry
+src/PurinPointer.Core/     # themes, cursor formats, image processing, strings (cross-platform, no WPF)
+src/PurinPointer/          # WPF app: UI (ported from AniOnMac), image decoding, registry
 tests/PurinPointer.Tests/  # dependency-free test runner
 ```
 
