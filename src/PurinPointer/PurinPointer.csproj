@@ -6,11 +6,17 @@
     <!-- Lets the project build on macOS/Linux (CI, tests); it still only runs on Windows. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The icon Explorer, the taskbar and Alt+Tab show for the .exe. -->
+    <ApplicationIcon>Assets\PurinPointer.ico</ApplicationIcon>
     <AssemblyName>PurinPointer</AssemblyName>
     <RootNamespace>PurinPointer</RootNamespace>
     <Product>Purin Pointer</Product>
     <Description>Animated cursor studio for Windows</Description>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\PurinPointer.ico" />
+    <Resource Include="Assets\Logo.png" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PurinPointer.Core\PurinPointer.Core.csproj" />
   </ItemGroup>
