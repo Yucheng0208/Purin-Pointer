@@ -1,58 +1,79 @@
-# Purin Pointer
+<p align="center">
+  <img src="docs/images/logo.png" alt="Purin Pointer" width="240">
+</p>
 
-**Windows 動畫游標工作室**：AniOnMac 的 Windows 版。匯入 `.ani`、`.cur`、PNG、GIF 或圖片資料夾，一鍵去背、調整定位點，打造你的專屬游標。
+<h1 align="center">Purin Pointer</h1>
 
-**繁體中文** · [English](README.md)
+<p align="center">
+  <b>Windows 動畫游標工作室</b><br>
+  把圖片、GIF 和游標檔變成你專屬的 Windows 滑鼠游標。
+</p>
 
-## 特色
+<p align="center">
+  <a href="README.md">English</a> · <b>繁體中文</b> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a>
+</p>
 
-- **主題**：可建立任意數量的主題，新增、複製、刪除都在左側欄；目前套用中的主題會標示「使用中」，所有設定自動儲存。
-- **4 種模式＋更多指標**：普通游標、連結指向、文字選取、等待狀態（同時套用到 Windows 的「忙碌」與「在背景作業」）；其餘 12 種 Windows 指標在「更多指標」選單裡。只套用已填入的模式，其他維持目前狀態。
-- **什麼素材都能用**：`.ani`／`.cur`／`.ico`、單張 PNG／JPG／BMP、動態 GIF，或依編號命名的圖片資料夾（排序和檔案總管一樣，`2.png` 在 `10.png` 前面），也可以直接貼上路徑。
-- **時間軸**：多張圖片會先開時間軸，可拖曳排序、◀ ▶ 微調、✕ 刪除、設定每格時間並即時預覽。
-- **去背**：「自動去背」移除與邊緣相連的底色；「魔術棒」在放大的預覽上點要移除的顏色，套用到每一幀；可「還原原圖」。
-- **定位點**：在預覽上拖曳，或輸入 X／Y。
-- **Windows 指標大小**：與「設定 › 協助工具 › 滑鼠指標」相同的全域大小（32–256 px）。
-- **復原**：「復原上次變更」回到套用或編輯之前；「恢復 Windows 原生外觀」把全部指標與大小改回預設。
-- **外觀與語言**：跟隨系統／淺色／深色（布丁色系）；繁體中文、简体中文、English、日本語、한국어。
-- **檢查更新**：比對 GitHub 上的最新版本。
-- **不需要管理員權限**：鼠標設定是每個使用者各自的（`HKCU\Control Panel\Cursors`），不會跳出 UAC。
+---
 
-## 下載與執行
+Purin Pointer 是 AniOnMac 的 Windows 版。匯入 `.ani`、`.cur`、PNG、GIF 或整個圖片資料夾，一鍵去背、放好定位點，就能套用成 Windows 的滑鼠游標。不需要繪圖技巧，也不需要系統管理員權限。
 
-1. 到 **Releases** 下載 `PurinPointer-win-x64.zip`（ARM 電腦請下載 `win-arm64`）。
-2. 解壓縮後執行 `PurinPointer.exe`，不需要安裝。
-3. 如果出現「**Windows 已保護您的電腦**」，點「**其他資訊 → 仍要執行**」。也可以在解壓縮前，對 ZIP 按右鍵 →「**內容**」→ 勾選「**解除封鎖**」。
+![Purin Pointer 主視窗](docs/images/tw/main.png)
+
+## 功能
+
+- **主題**：想做幾套就做幾套，在側欄新增、複製、刪除。套用中的主題會標示「使用中」，所有變更自動儲存。
+- **4 種模式＋12 種指標**：普通游標、連結指向、文字選取、等待狀態，其餘 12 種 Windows 指標在「更多指標」裡。只套用已填入的模式。
+- **支援多種素材**：`.ani`、`.cur`、`.ico`、PNG、JPG、BMP、動態 GIF，或依編號命名的圖片資料夾。
+- **時間軸**：調整畫格順序、刪除畫格、設定每格時間並即時預覽。
+- **去背**：單色背景用「自動去背」，指定顏色用「魔術棒」，一次處理每一格。
+- **定位點**：在放大的預覽上拖曳，或直接輸入 X／Y。
+- **指標大小**：與 Windows「設定」相同的全域大小（32–256 px），兩邊同步。
+- **隨時復原**：「復原上次變更」和「恢復 Windows 原生外觀」一鍵完成。
+- **淺色與深色**：布丁配色，支援繁體中文、简体中文、English、日本語、한국어。
+
+## 下載
+
+1. 到 [Releases](https://github.com/Yucheng0208/Purin-Pointer/releases/latest) 下載 ZIP：
+   - `PurinPointer-win-x64.zip`：大多數 Windows 電腦（Intel／AMD）
+   - `PurinPointer-win-arm64.zip`：ARM 筆電（例如 Snapdragon）
+2. 解壓縮後執行 `PurinPointer.exe`。免安裝，也不需要另外安裝 .NET。
+3. 如果出現「**Windows 已保護您的電腦**」，按「**其他資訊 → 仍要執行**」。
 
 > [!IMPORTANT]
-> 發佈版本**沒有程式碼簽章**。Windows 11 開啟「**智慧型應用程式控制**」時，未簽章的程式會被直接封鎖，沒有「仍要執行」可以點。遇到這種情況，請照下方說明自行建置，或等待有簽章的版本。
+> 發佈版本**沒有程式碼簽章**。Windows 11 開啟「**智慧型應用程式控制**」時，未簽章的程式會被直接封鎖。遇到這種情況，請[從原始碼建置](docs/engineering.tw.md#build-and-run)。
+
+系統需求：Windows 10 或 Windows 11。
+
+## 快速上手
+
+1. 選一個模式分頁，例如「**普通游標**」。
+2. 把圖片、GIF 或 `.ani` 檔拖曳到「**01 匯入游標**」。
+3. 如果有背景，按「**04 去背**」裡的「**自動去背**」。
+4. 在預覽上把定位點的十字拖到游標的尖端。
+5. 按「**套用主題**」（或按 **Ctrl + Enter**）。
+
+完整說明請看[操作手冊](docs/user-guide.tw.md)。
+
+## 文件
+
+| 文件 | 內容 |
+| --- | --- |
+| [操作手冊](docs/user-guide.tw.md) | 每個畫面與功能的逐步說明，以及疑難排解 |
+| [工程說明](docs/engineering.tw.md) | 架構、建置、測試、與 Windows 的整合方式，以及發佈流程 |
 
 ## 從原始碼建置
 
-需要 [.NET 10 SDK](https://dotnet.microsoft.com/download)，或安裝了「.NET 桌面開發」工作負載的 Visual Studio 2026。
-
-- **Visual Studio**：開啟 `PurinPointer.sln`，把 `PurinPointer` 設為啟動專案，按 **F5**。
-- **命令列**：
+需要 [.NET 10 SDK](https://dotnet.microsoft.com/download)。
 
 ```powershell
-dotnet run --project src/PurinPointer                 # 執行程式
-dotnet run --project tests/PurinPointer.Tests         # 執行測試（任何作業系統都可以）
-dotnet publish src/PurinPointer -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+dotnet run --project src/PurinPointer
 ```
 
-發佈方式：執行上面的 `dotnet publish` 指令（ARM 版改用 `-r win-arm64`），把 `publish\PurinPointer.exe` 壓縮成 `PurinPointer-win-x64.zip`，再手動上傳到 GitHub 的新 Release。
+```powershell
+dotnet run --project tests/PurinPointer.Tests
+```
 
-## 資料存放位置
-
-`%LOCALAPPDATA%\PurinPointer\`
-
-| 路徑 | 內容 |
-| --- | --- |
-| `library.json` | 主題、語言、外觀、使用中的主題 |
-| `assets\` | 匯入的游標副本（原檔可以移動或刪除） |
-| `cursors\` | 套用時產生的 `.cur`／`.ani`，登錄檔會指向這裡 |
-| `backups\` | 每個主題套用前的指標設定（「復原上次變更」會用到） |
-| `native-reset-recovery.json` | 上次「恢復 Windows 原生外觀」之前的指標設定 |
+發佈方式與專案結構請看[工程說明](docs/engineering.tw.md)。
 
 ## 授權
 

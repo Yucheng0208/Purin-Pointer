@@ -1,67 +1,79 @@
-# Purin Pointer
+<p align="center">
+  <img src="docs/images/logo.png" alt="Purin Pointer" width="240">
+</p>
 
-**Animated cursor studio for Windows** — the Windows edition of AniOnMac. Import `.ani`, `.cur`, PNG, GIF or a folder of images, remove the background in one click, tune the hotspot and make the cursor truly yours.
+<h1 align="center">Purin Pointer</h1>
 
-[繁體中文](README.tw.md) · English
+<p align="center">
+  <b>Animated cursor studio for Windows</b><br>
+  Turn images, GIFs and cursor files into your own Windows mouse pointers.
+</p>
+
+<p align="center">
+  <b>English</b> · <a href="README.tw.md">繁體中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a>
+</p>
+
+---
+
+Purin Pointer is the Windows edition of AniOnMac. Import `.ani`, `.cur`, PNG, GIF or a folder of images, remove the background in one click, place the hotspot, and apply it as your Windows pointer. No drawing skills, no administrator rights.
+
+![Purin Pointer main window](docs/images/en/main.png)
 
 ## Features
 
-- **Themes** — as many as you like; add, duplicate and delete them in the sidebar. The applied theme is tagged *In use*, and everything saves automatically.
-- **4 modes + more pointers** — Normal, Link, Text and Busy (Busy drives both Windows' *Busy* and *Working in Background*); the other 12 Windows pointers live under *More pointers*. Only filled modes are applied; the rest stay as they are.
-- **Any source** — `.ani` / `.cur` / `.ico`, a single PNG/JPG/BMP, an animated GIF, or a folder of numbered images (sorted like Explorer: `2.png` before `10.png`), or paste a path.
-- **Timeline** — several images open on a timeline first: drag to reorder, nudge with ◀ ▶, drop frames with ✕, set the frame time and preview live.
-- **Background removal** — *Auto remove* clears the background colour touching the edges; the *magic wand* erases a clicked colour on every frame; *Restore original* undoes it.
-- **Hotspot** — drag it on the preview or type X/Y.
-- **Windows pointer size** — the same global size as Settings › Accessibility › Mouse pointer (32–256 px).
-- **Undo** — *Undo last change* goes back to before the last apply or edit; *Restore Windows appearance* puts every pointer and the size back to the defaults.
-- **Appearance and language** — follow system / light / dark (pudding colours); 繁體中文, 简体中文, English, 日本語, 한국어.
-- **Update check** — compares with the latest release on GitHub.
-- **No administrator rights** — pointer settings are per-user (`HKCU\Control Panel\Cursors`), so there is no UAC prompt.
+- **Themes**: as many as you like, with add, duplicate and delete in the sidebar. The applied theme is tagged *In use*, and everything saves automatically.
+- **4 modes plus 12 pointers**: Arrow, Pointing, IBeam and Wait, plus the other 12 Windows pointers under *More pointers*. Only filled modes are applied.
+- **Any source**: `.ani`, `.cur`, `.ico`, PNG, JPG, BMP, animated GIF, or a folder of numbered images.
+- **Timeline**: order frames, remove frames, set the frame time and preview live.
+- **Background removal**: *Auto remove* for flat backgrounds, the *Magic wand* for one colour across every frame.
+- **Hotspot**: drag it on an enlarged preview, or type X / Y.
+- **Pointer size**: the same global size as Windows Settings (32–256 px), kept in sync.
+- **Undo**: *Undo last change* and *Restore Windows appearance* are one click away.
+- **Light and dark**: pudding-coloured themes, in 繁體中文, 简体中文, English, 日本語 and 한국어.
 
-## Download and run
+## Download
 
-1. Download `PurinPointer-win-x64.zip` (or `win-arm64`) from **Releases**.
-2. Extract it and run `PurinPointer.exe`. No installation needed.
-3. If **Windows protected your PC** appears, click **More info → Run anyway**. (Or right-click the ZIP → **Properties** → tick **Unblock** before extracting.)
+1. Download a ZIP from [Releases](https://github.com/Yucheng0208/Purin-Pointer/releases/latest):
+   - `PurinPointer-win-x64.zip`: most Windows PCs (Intel / AMD)
+   - `PurinPointer-win-arm64.zip`: ARM laptops (such as Snapdragon)
+2. Extract it and run `PurinPointer.exe`. No installation and no separate .NET install needed.
+3. If **Windows protected your PC** appears, click **More info → Run anyway**.
 
 > [!IMPORTANT]
-> The release is **not code-signed**. On Windows 11 with **Smart App Control** turned **on**, unsigned apps are blocked outright, with no "Run anyway" button. In that case build it yourself (below) or wait for a signed release.
+> Releases are **not code-signed**. With **Smart App Control** turned on, Windows 11 blocks unsigned apps outright. In that case, [build from source](docs/engineering.md#build-and-run).
+
+Requires Windows 10 or Windows 11.
+
+## Quick start
+
+1. Pick a mode tab, for example **Arrow**.
+2. Drag an image, GIF or `.ani` file onto **01 Import cursor**.
+3. If it has a background, click **Auto remove** under **04 Remove background**.
+4. Drag the hotspot cross on the preview to the tip of your pointer.
+5. Click **Apply theme** (or press **Ctrl + Enter**).
+
+The full walkthrough is in the [user guide](docs/user-guide.md).
+
+## Documentation
+
+| Document | For |
+| --- | --- |
+| [User guide](docs/user-guide.md) | Every screen and feature, step by step, with troubleshooting |
+| [Engineering guide](docs/engineering.md) | Architecture, building, testing, Windows integration and releasing |
 
 ## Build from source
 
-Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download) or Visual Studio 2026 with the *.NET desktop development* workload.
-
-- **Visual Studio:** open `PurinPointer.sln`, set `PurinPointer` as the startup project, press **F5**.
-- **Command line:**
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```powershell
-dotnet run --project src/PurinPointer                 # run the app
-dotnet run --project tests/PurinPointer.Tests         # run the tests (any OS)
-dotnet publish src/PurinPointer -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+dotnet run --project src/PurinPointer
 ```
 
-To release: run the `dotnet publish` command above (use `-r win-arm64` for ARM), zip `publish\PurinPointer.exe` as `PurinPointer-win-x64.zip`, and upload it to a new GitHub release by hand.
-
-## Where data lives
-
-`%LOCALAPPDATA%\PurinPointer\`
-
-| Path | Contents |
-| --- | --- |
-| `library.json` | Themes, language, appearance and the theme in use |
-| `assets\` | Copies of imported cursors (the originals can be moved or deleted) |
-| `cursors\` | `.cur` / `.ani` files written on apply; the registry points here |
-| `backups\` | Each theme's pointer settings from before it was applied (used by *Undo last change*) |
-| `native-reset-recovery.json` | Pointer settings from before the last *Restore Windows appearance* |
-
-## Project layout
-
-```text
-PurinPointer.sln
-src/PurinPointer.Core/     # themes, cursor formats, image processing, strings (cross-platform, no WPF)
-src/PurinPointer/          # WPF app: UI (ported from AniOnMac), image decoding, registry
-tests/PurinPointer.Tests/  # dependency-free test runner
+```powershell
+dotnet run --project tests/PurinPointer.Tests
 ```
+
+See the [engineering guide](docs/engineering.md) for publishing and the project layout.
 
 ## License
 
