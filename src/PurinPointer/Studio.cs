@@ -66,6 +66,12 @@ public sealed class Studio
                 Library = Library.CreateNew(name);
                 Persist();
             }
+            // "In use" only while Windows really points at our files (Settings or another app may have changed them).
+            if (Library.InUse is not null && !CursorSystem.UsesAppCursors())
+            {
+                Library.InUse = null;
+                Persist();
+            }
             ApplyLanguage(Library.Language);
             ThemeManager.Apply(Library.Appearance);
             Ready = true;

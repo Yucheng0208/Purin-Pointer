@@ -163,9 +163,8 @@
           </DockPanel>
         </StackPanel>
 
-        <!-- Editor -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,18">
-          <Border x:Name="EditorCard" CornerRadius="18" Padding="22" Background="{DynamicResource EditorCard}">
+        <!-- Editor: the settings column scrolls on its own, the preview stays in view. -->
+          <Border x:Name="EditorCard" CornerRadius="18" Padding="22,22,22,22" Background="{DynamicResource EditorCard}" Margin="0,0,0,18">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -174,13 +173,14 @@
               </Grid.ColumnDefinitions>
 
               <!-- Left: import, size, hotspot, background -->
-              <StackPanel>
+              <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,-12,0">
+              <StackPanel Margin="0,0,12,0">
                 <DockPanel>
                   <Button x:Name="ClearButton" DockPanel.Dock="Right" Click="OnClearSlot" FontSize="12"><TextBlock x:Name="ClearText" FontSize="12" /></Button>
                   <TextBlock x:Name="ImportHeading" Style="{StaticResource SectionTitle}" Margin="0" VerticalAlignment="Center" />
                 </DockPanel>
 
-                <Grid Margin="0,16,0,0" Height="170">
+                <Grid Margin="0,16,0,0" Height="156">
                   <Border x:Name="DropZone" CornerRadius="14" Background="{DynamicResource Cream}" AllowDrop="True"
                           DragEnter="OnDropZoneDragEnter" DragOver="OnDropZoneDragOver" DragLeave="OnDropZoneDragLeave" Drop="OnDropZoneDrop" />
                   <Rectangle RadiusX="14" RadiusY="14" Stroke="{DynamicResource Line}" StrokeThickness="1.2" StrokeDashArray="4 4" IsHitTestVisible="False" />
@@ -267,16 +267,26 @@
                 <TextBlock x:Name="BackgroundHint" Style="{StaticResource Hint}" Margin="0,10,0,0" />
                 <TextBlock x:Name="ModeHint" Style="{StaticResource Hint}" Margin="0,14,0,0" />
               </StackPanel>
+              </ScrollViewer>
 
               <!-- Right: preview -->
-              <StackPanel Grid.Column="2">
+              <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="*" MinHeight="180" />
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <DockPanel>
-                  <Border DockPanel.Dock="Right" Background="{DynamicResource Cream}" CornerRadius="10" Padding="8,4">
-                    <TextBlock x:Name="ActualSizeText" FontSize="11" Foreground="{DynamicResource Accent}" />
-                  </Border>
+                  <ToggleButton x:Name="ZoomToggle" DockPanel.Dock="Right" Click="OnZoomClicked" MinHeight="28" Padding="10,3">
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock x:Name="ZoomIcon" FontFamily="{StaticResource IconFont}" FontSize="11" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+                      <TextBlock x:Name="ActualSizeText" FontSize="11" Foreground="{DynamicResource Accent}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </ToggleButton>
                   <TextBlock x:Name="PreviewHeading" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </DockPanel>
-                <Border Margin="0,14,0,0" Height="310" CornerRadius="16" Background="{DynamicResource Card}" BorderBrush="{DynamicResource Divider}" BorderThickness="1" ClipToBounds="True">
+                <Border Grid.Row="1" Margin="0,14,0,0" CornerRadius="16" Background="{DynamicResource Card}" BorderBrush="{DynamicResource Divider}" BorderThickness="1" ClipToBounds="True">
                   <Grid>
                     <Border x:Name="PreviewChecker" CornerRadius="16" Background="{DynamicResource Checker}" Visibility="Collapsed" />
                     <TextBlock x:Name="NoCursorText" Foreground="{DynamicResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -289,14 +299,13 @@
                     </Grid>
                   </Grid>
                 </Border>
-                <CheckBox x:Name="ShowHotspotBox" Margin="0,14,0,0" IsChecked="True" Click="OnShowHotspotChanged">
+                <CheckBox x:Name="ShowHotspotBox" Grid.Row="2" Margin="0,14,0,0" IsChecked="True" Click="OnShowHotspotChanged">
                   <TextBlock x:Name="ShowHotspotText" FontSize="12" />
                 </CheckBox>
-                <TextBlock x:Name="PreviewHint" Style="{StaticResource Hint}" Margin="0,14,0,0" />
-              </StackPanel>
+                <TextBlock x:Name="PreviewHint" Grid.Row="3" Style="{StaticResource Hint}" Margin="0,10,0,0" />
+              </Grid>
             </Grid>
           </Border>
-        </ScrollViewer>
       </DockPanel>
     </Grid>
 

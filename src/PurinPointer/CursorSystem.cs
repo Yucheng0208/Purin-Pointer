@@ -150,6 +150,8 @@ public static class CursorSystem
     /// <summary>The pointer size from Settings › Accessibility › Mouse pointer (32–256 px).</summary>
     public static int GetBaseSize()
     {
+        int live = 0;
+        if (SystemParametersInfo(SPI_GETCURSORBASESIZE, 0, ref live, 0) && live >= 32 && live <= 256) return live;
         using var key = Registry.CurrentUser.OpenSubKey(CursorsKey);
         return key?.GetValue("CursorBaseSize") is int v && v >= 32 ? v : 32;
     }
@@ -157,9 +159,22 @@ public static class CursorSystem
     public static void SetBaseSize(int size)
     {
         size = Math.Clamp(size / 16 * 16, 32, 256);
+        StoreBaseSize(size);
+        Reload(size);
+    }
+
+    /// <summary>Writes the size where Windows and Settings › Accessibility › Mouse pointer read it.</summary>
+    static void StoreBaseSize(int size)
+    {
         using (var key = Registry.CurrentUser.CreateSubKey(CursorsKey))
             key.SetValue("CursorBaseSize", size, RegistryValueKind.DWord);
-        Reload();
+        // The Settings slider (1–15, 1 = 32 px, +16 px per step) reads this; keep it in sync.
+        try
+        {
+            using var a11y = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Accessibility");
+            a11y.SetValue("CursorSize", (size - 32) / 16 + 1, RegistryValueKind.DWord);
+        }
+        catch (Exception e) when (e is UnauthorizedAccessException or IOException or System.Security.SecurityException) { }
     }
 
     public static void Write(CursorSnapshot snap)
@@ -171,16 +186,40 @@ public static class CursorSystem
                              RegistryValueKind.ExpandString);
             key.SetValue("", snap.SchemeName ?? "", RegistryValueKind.String);
             if (snap.SchemeSource is int src) key.SetValue("Scheme Source", src, RegistryValueKind.DWord);
-            if (snap.BaseSize is int size) key.SetValue("CursorBaseSize", size, RegistryValueKind.DWord);
         }
-        Reload();
+        int size = snap.BaseSize is int s ? Math.Clamp(s / 16 * 16, 32, 256) : GetBaseSize();
+        StoreBaseSize(size);
+        Reload(size);
     }
 
-    /// <summary>Tells Windows to reload the cursors from the registry and notifies running apps.</summary>
-    static void Reload()
+    /// <summary>
+    /// Tells Windows to use the pointer size and reload the cursors from the registry.
+    /// SPI_SETCURSORS reports FALSE (with no error code) on many Windows 10/11 builds even though
+    /// the cursors do reload, so its return value is not treated as a failure.
+    /// </summary>
+    static void Reload(int size)
     {
-        if (!SystemParametersInfo(SPI_SETCURSORS, 0, IntPtr.Zero, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE))
-            throw new InvalidOperationException($"Windows refused to reload the cursors (error {Marshal.GetLastWin32Error()}).");
+        // Undocumented but stable since Windows 10 1809: the call Settings makes for the pointer size.
+        // Without it Windows keeps its old in-memory size and may write it back over CursorBaseSize.
+        SystemParametersInfo(SPI_SETCURSORBASESIZE, 0, (IntPtr)size, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+        SystemParametersInfo(SPI_SETCURSORS, 0, IntPtr.Zero, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+    }
+
+    /// <summary>True when Windows' pointers currently point at files this app wrote.</summary>
+    public static bool UsesAppCursors()
+    {
+        var snap = ReadCurrent();
+        var dir = Path.GetFullPath(CursorDir).TrimEnd('\\') + "\\";
+        return snap.Values.Values.Any(v =>
+        {
+            if (string.IsNullOrWhiteSpace(v)) return false;
+            try
+            {
+                var path = Path.GetFullPath(Environment.ExpandEnvironmentVariables(v.Trim('"')));
+                return path.StartsWith(dir, StringComparison.OrdinalIgnoreCase) && File.Exists(path);
+            }
+            catch (ArgumentException) { return false; }
+        });
     }
 
     /// <summary>Deletes applied cursor files that neither the registry nor any saved snapshot refers to.</summary>
@@ -209,10 +248,16 @@ public static class CursorSystem
     }
 
     const uint SPI_SETCURSORS = 0x0057;
+    const uint SPI_GETCURSORBASESIZE = 0x2028;
+    const uint SPI_SETCURSORBASESIZE = 0x2029;
     const uint SPIF_UPDATEINIFILE = 0x01;
     const uint SPIF_SENDCHANGE = 0x02;
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    static extern bool SystemParametersInfo(uint uiAction, uint uiParam, ref int pvParam, uint fWinIni);
 }

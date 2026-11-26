@@ -22,6 +22,9 @@ public partial class MainWindow : Window
     bool _dragging;
     string _shownHotX = "", _shownHotY = "";
     string _sidebarSignature = "";
+    /// <summary>Show the preview enlarged (default) instead of at the real pointer size.</summary>
+    bool _zoomed = true;
+    const double EnlargedSide = 240;
 
     static readonly Dictionary<string, string> ModeGlyphs = new()
     {
@@ -33,6 +36,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // Fit smaller or highly scaled screens (e.g. a laptop at 175 %) instead of running off the bottom.
+        var work = SystemParameters.WorkArea;
+        MinWidth = Math.Min(MinWidth, work.Width - 16);
+        MinHeight = Math.Min(MinHeight, work.Height - 16);
+        Width = Math.Min(Width, work.Width - 16);
+        Height = Math.Min(Height, work.Height - 16);
         SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
 
         foreach (var key in CursorModes.Main) _tabs.Add(MakeTab(key));
@@ -241,7 +250,7 @@ public partial class MainWindow : Window
         ResetHotspotText.Text = T("resetHotspot");
         ResetHotspotButton.IsEnabled = has && slot.Hotspot is not null;
         HotspotInputs.IsEnabled = has;
-        var (w, h) = DisplaySize(preview, baseSize);
+        var (w, h) = DisplaySize(preview, baseSize, actual: true);
         var (hx, hy) = _studio.HotspotOf(slot);
         _shownHotX = has ? Math.Round(hx * w, 1).ToString(CultureInfo.CurrentCulture) : "0";
         _shownHotY = has ? Math.Round(hy * h, 1).ToString(CultureInfo.CurrentCulture) : "0";
@@ -265,17 +274,24 @@ public partial class MainWindow : Window
         ModeHint.Visibility = ModeHint.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         PreviewHeading.Text = T("preview");
-        ActualSizeText.Text = T("actualSize");
+        bool zoomed = _zoomed || _studio.WandActive;
+        ZoomToggle.IsChecked = zoomed;
+        ZoomToggle.IsEnabled = !_studio.WandActive;
+        ZoomToggle.ToolTip = T("zoomHint");
+        ZoomIcon.Text = zoomed ? "" : ""; // zoom / full screen
+        ActualSizeText.Text = zoomed ? T("enlarged") : T("actualSize");
         ShowHotspotText.Text = T("showHotspot");
-        PreviewHint.Text = T("previewHint") + "\n" + T("markerHint");
+        PreviewHint.Text = (zoomed ? T("enlargedHint") : T("previewHint")) + "\n" + T("markerHint");
         NoCursorText.Text = T("noCursor");
         RefreshPreview(slot, preview, baseSize);
     }
 
-    /// <summary>The preview's on-screen size: the Windows pointer size, or enlarged to 240 for the magic wand.</summary>
-    (double W, double H) DisplaySize(PreviewFrames? p, int baseSize)
+    /// <summary>The preview's on-screen size: the Windows pointer size (1:1, or <paramref name="actual"/>),
+    /// or enlarged to at least 240 so it is easy to see and to place the hotspot.</summary>
+    (double W, double H) DisplaySize(PreviewFrames? p, int baseSize, bool actual = false)
     {
-        double side = _studio.WandActive ? 240 : baseSize;
+        bool zoomed = !actual && (_zoomed || _studio.WandActive);
+        double side = zoomed ? Math.Max(EnlargedSide, baseSize) : baseSize;
         if (p is null) return (side, side);
         double max = Math.Max(p.Width, p.Height);
         return (side * p.Width / max, side * p.Height / max);
@@ -515,7 +531,7 @@ public partial class MainWindow : Window
     {
         if (_loading || _studio.Slot.IsEmpty) return;
         if (HotXBox.Text == _shownHotX && HotYBox.Text == _shownHotY) return; // unchanged: keep the file's own hotspot
-        var (w, h) = DisplaySize(_studio.Preview(_studio.Slot), _studio.BaseSize);
+        var (w, h) = DisplaySize(_studio.Preview(_studio.Slot), _studio.BaseSize, actual: true);
         if (double.TryParse(HotXBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var x) &&
             double.TryParse(HotYBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var y) &&
             double.IsFinite(x) && double.IsFinite(y))
@@ -526,6 +542,12 @@ public partial class MainWindow : Window
     void OnResetHotspot(object sender, RoutedEventArgs e) => _studio.SetHotspot(null);
 
     void OnShowHotspotChanged(object sender, RoutedEventArgs e) => Refresh();
+
+    void OnZoomClicked(object sender, RoutedEventArgs e)
+    {
+        _zoomed = !_zoomed;
+        Refresh();
+    }
 
     // Drag the hotspot on the preview; with the magic wand on, a click removes that colour instead.
     void OnPreviewDown(object sender, MouseButtonEventArgs e)
