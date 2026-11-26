@@ -147,8 +147,11 @@ public sealed class Studio
         Save();
     }
 
-    static void ApplyLanguage(string code) =>
+    static void ApplyLanguage(string code)
+    {
         Loc.Instance.Code = code == "system" ? Loc.Detect(CultureInfo.CurrentUICulture) : code;
+        ThemeManager.ApplyFont(Loc.Instance.Code);
+    }
 
     public void SetAppearance(string mode)
     {

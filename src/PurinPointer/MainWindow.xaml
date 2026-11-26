@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:PurinPointer"
         Title="Purin Pointer" Width="1180" Height="880" MinWidth="1060" MinHeight="760"
         WindowStartupLocation="CenterScreen" Background="{DynamicResource Paper}" Icon="Assets/PurinPointer.ico"
-        FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft JhengHei UI, Microsoft YaHei UI, Yu Gothic UI, Malgun Gothic"
+        FontFamily="{DynamicResource UiFont}"
         FontSize="13">
   <Window.InputBindings>
     <KeyBinding Key="Enter" Modifiers="Control" Command="{x:Static local:MainWindow.ApplyCommand}" />
@@ -56,7 +56,8 @@
             <TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12" Foreground="{DynamicResource Muted}" VerticalAlignment="Center" />
             <TextBlock x:Name="AutoSaveText" FontSize="12" Foreground="{DynamicResource Muted}" Margin="6,0,0,0" />
           </StackPanel>
-          <StackPanel Orientation="Horizontal">
+          <!-- WrapPanel so longer translations (e.g. Japanese) move to a second line instead of being cut off. -->
+          <WrapPanel>
             <Button x:Name="AboutButton" Style="{StaticResource LinkButton}" Click="OnAbout"><TextBlock x:Name="AboutText" FontSize="11" Foreground="{DynamicResource Accent}" /></Button>
             <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource Muted}" />
             <Button Style="{StaticResource LinkButton}" Click="OnGitHub"><TextBlock Text="GitHub" FontSize="11" Foreground="{DynamicResource Accent}" /></Button>
@@ -67,7 +68,7 @@
                 <TextBlock x:Name="UpdateText" FontSize="11" Foreground="{DynamicResource Accent}" Margin="4,0,0,0" />
               </StackPanel>
             </Button>
-          </StackPanel>
+          </WrapPanel>
         </StackPanel>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="10,0">
@@ -156,10 +157,12 @@
                 </StackPanel>
               </Button>
             </StackPanel>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-              <TextBlock x:Name="StatusIcon" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
-              <TextBlock x:Name="StatusText" FontSize="12" Foreground="{DynamicResource Muted}" Margin="10,0,16,0" VerticalAlignment="Center" />
-            </StackPanel>
+            <!-- DockPanel (not a horizontal StackPanel) so long status text wraps instead of running under the buttons. -->
+            <DockPanel VerticalAlignment="Center">
+              <TextBlock x:Name="StatusIcon" DockPanel.Dock="Left" FontFamily="{StaticResource IconFont}" FontSize="13" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" />
+              <TextBlock x:Name="StatusText" FontSize="12" Foreground="{DynamicResource Muted}" Margin="10,0,16,0" VerticalAlignment="Center"
+                         TextWrapping="Wrap" MaxHeight="34" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
           </DockPanel>
         </StackPanel>
 

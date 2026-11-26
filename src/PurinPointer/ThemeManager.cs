@@ -41,6 +41,24 @@ public static class ThemeManager
         }
     }
 
+    /// <summary>
+    /// Puts the chosen language's CJK font right after Segoe UI. WPF takes each character from the
+    /// first font in the list that has it, so with a fixed list Japanese and Korean text would be drawn
+    /// with the Chinese font (wrong kanji shapes, oddly spaced kana).
+    /// </summary>
+    public static void ApplyFont(string languageCode)
+    {
+        string[] cjk = languageCode switch
+        {
+            "ja" => ["Yu Gothic UI", "Meiryo UI", "Microsoft JhengHei UI", "Microsoft YaHei UI", "Malgun Gothic"],
+            "ko" => ["Malgun Gothic", "Microsoft JhengHei UI", "Microsoft YaHei UI", "Yu Gothic UI"],
+            "zh-Hans" => ["Microsoft YaHei UI", "Microsoft JhengHei UI", "Yu Gothic UI", "Malgun Gothic"],
+            _ => ["Microsoft JhengHei UI", "Microsoft YaHei UI", "Yu Gothic UI", "Malgun Gothic"],
+        };
+        Application.Current.Resources["UiFont"] =
+            new System.Windows.Media.FontFamily(string.Join(", ", new[] { "Segoe UI Variable Text", "Segoe UI" }.Concat(cjk)));
+    }
+
     static bool SystemUsesDarkMode()
     {
         using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");

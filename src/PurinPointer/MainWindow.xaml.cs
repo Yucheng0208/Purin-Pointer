@@ -321,6 +321,7 @@ public partial class MainWindow : Window
     void RefreshFooter()
     {
         StatusText.Text = _studio.StatusText;
+        StatusText.ToolTip = _studio.StatusText;
         StatusIcon.Text = _studio.StatusIsWarning ? "" : _studio.StatusIsSuccess ? "" : "";
         StatusIcon.SetResourceReference(TextBlock.ForegroundProperty, _studio.StatusIsWarning ? "Warning" : "Accent");
         NativeText.Text = T("nativeReset");

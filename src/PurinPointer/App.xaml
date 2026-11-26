@@ -12,6 +12,8 @@
 
       <CornerRadius x:Key="ControlRadius">10</CornerRadius>
       <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+      <!-- Replaced at runtime by ThemeManager.ApplyFont so CJK text uses the font of the chosen language. -->
+      <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI, Microsoft JhengHei UI, Microsoft YaHei UI, Yu Gothic UI, Malgun Gothic</FontFamily>
 
       <Style TargetType="TextBlock">
         <Setter Property="Foreground" Value="{DynamicResource Ink}" />
@@ -312,7 +314,7 @@
         </Setter>
       </Style>
 
-      <!-- Slim rounded scroll bar (vertical only; horizontal scrolling is disabled in this app). -->
+      <!-- Slim rounded scroll bars: vertical (editor, theme list) and horizontal (timeline frame strip). -->
       <Style TargetType="ScrollBar">
         <Setter Property="Width" Value="10" />
         <Setter Property="MinWidth" Value="10" />
@@ -333,6 +335,38 @@
             </ControlTemplate>
           </Setter.Value>
         </Setter>
+        <Style.Triggers>
+          <Trigger Property="Orientation" Value="Horizontal">
+            <Setter Property="Width" Value="Auto" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="MinHeight" Value="10" />
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                  <Track x:Name="PART_Track">
+                    <!-- Clicking the empty track pages left / right. -->
+                    <Track.DecreaseRepeatButton>
+                      <RepeatButton Command="ScrollBar.PageLeftCommand" Opacity="0" Focusable="False" />
+                    </Track.DecreaseRepeatButton>
+                    <Track.IncreaseRepeatButton>
+                      <RepeatButton Command="ScrollBar.PageRightCommand" Opacity="0" Focusable="False" />
+                    </Track.IncreaseRepeatButton>
+                    <Track.Thumb>
+                      <Thumb>
+                        <Thumb.Template>
+                          <ControlTemplate TargetType="Thumb">
+                            <Border Height="6" CornerRadius="3" Background="{DynamicResource Line}" VerticalAlignment="Center" />
+                          </ControlTemplate>
+                        </Thumb.Template>
+                      </Thumb>
+                    </Track.Thumb>
+                  </Track>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Trigger>
+        </Style.Triggers>
       </Style>
 
       <Style TargetType="Separator">

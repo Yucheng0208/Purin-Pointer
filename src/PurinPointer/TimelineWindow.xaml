@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Width="800" SizeToContent="Height" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{DynamicResource Paper}" Icon="Assets/PurinPointer.ico"
-        FontFamily="Segoe UI Variable Text, Segoe UI, Microsoft JhengHei UI, Microsoft YaHei UI, Yu Gothic UI, Malgun Gothic" FontSize="13">
+        FontFamily="{DynamicResource UiFont}" FontSize="13">
   <StackPanel Margin="22">
     <DockPanel>
       <TextBlock x:Name="CountText" DockPanel.Dock="Right" Foreground="{DynamicResource Muted}" VerticalAlignment="Bottom" />
