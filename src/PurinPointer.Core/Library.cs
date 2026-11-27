@@ -4,8 +4,8 @@ using System.Text.Json.Serialization;
 namespace PurinPointer.Core;
 
 /// <summary>
-/// The editable pointer slots. The four main modes match AniOnMac; "wait" drives both of
-/// Windows' busy pointers. The other Windows pointers are reachable from "More pointers".
+/// The editable pointer slots. The four main modes match AniOnMac; "wait" also drives Windows'
+/// "Working in Background" pointer unless that one has its own cursor (under "More pointers").
 /// </summary>
 public static class CursorModes
 {
@@ -14,13 +14,16 @@ public static class CursorModes
 
     /// <summary>Windows pointers not covered by a main mode; their key is the registry name.</summary>
     public static readonly IReadOnlyList<string> Extra =
-        ["Help", "Crosshair", "NWPen", "No", "SizeNS", "SizeWE", "SizeNWSE", "SizeNESW", "SizeAll", "UpArrow", "Pin", "Person"];
+        ["AppStarting", "Help", "Crosshair", "NWPen", "No", "SizeNS", "SizeWE", "SizeNWSE", "SizeNESW", "SizeAll", "UpArrow", "Pin", "Person"];
 
     public static IEnumerable<string> All => Main.Concat(Extra);
 
     public static bool IsMain(string key) => Main.Contains(key);
 
-    /// <summary>The Windows pointers a slot writes to when applied.</summary>
+    /// <summary>
+    /// The Windows pointers a slot writes to when applied. Slots are applied in <see cref="All"/> order,
+    /// so a filled "AppStarting" slot overrides the one "wait" writes.
+    /// </summary>
     public static IReadOnlyList<CursorRole> Roles(string key) => key switch
     {
         Arrow => [CursorRole.Get("Arrow")],
@@ -48,10 +51,12 @@ public sealed class Slot
     public double[]? Hotspot { get; set; }
     /// <summary>Asset before background removal, so it can be restored.</summary>
     public string? OriginalAsset { get; set; }
+    /// <summary>Drawing style (<see cref="CursorStyles"/>); null = smooth.</summary>
+    public string? Style { get; set; }
 
     [JsonIgnore] public bool IsEmpty => Asset.Length == 0;
 
-    public Slot Clone() => new() { Key = Key, Asset = Asset, Filename = Filename, Hotspot = Hotspot?.ToArray(), OriginalAsset = OriginalAsset };
+    public Slot Clone() => new() { Key = Key, Asset = Asset, Filename = Filename, Hotspot = Hotspot?.ToArray(), OriginalAsset = OriginalAsset, Style = Style };
 }
 
 public sealed class Profile
@@ -293,22 +298,46 @@ public static class CursorOps
     }
 
     /// <summary>
-    /// The file written to Windows: frames fitted onto a square canvas with the slot's hotspot.
-    /// A still image becomes .cur, an animation .ani.
+    /// The file written to Windows: frames drawn in the slot's style onto a square canvas with the
+    /// slot's hotspot. A still image becomes .cur, an animation .ani.
     /// </summary>
-    public static (byte[] Data, string Extension) Export(Slot slot, AnimatedCursor asset, int canvas)
+    public static (byte[] Data, string Extension) Export(Slot slot, AnimatedCursor asset, int canvas, int pixelBlock = 2)
     {
         canvas = Math.Clamp(canvas, 16, CurWriter.MaxSize);
+        var style = CursorStyles.Of(slot);
         var img = asset.Frames[0].Image;
         var place = Resampler.Place(img.Width, img.Height, canvas);
         var (hx, hy) = Hotspot(slot, asset);
         var (cx, cy) = place.SourceToCanvas(hx * img.Width, hy * img.Height);
         int x = Math.Clamp((int)Math.Floor(cx), 0, canvas - 1), y = Math.Clamp((int)Math.Floor(cy), 0, canvas - 1);
-        var frames = asset.Frames.Select(f => f with { Image = Resampler.FitToCanvas(f.Image, canvas) }).ToList();
+        var frames = asset.Frames.Select(f =>
+        {
+            var p = Resampler.Place(f.Image.Width, f.Image.Height, canvas);
+            var drawn = CursorStyles.Render(f.Image, p.Width, p.Height, style, pixelBlock);
+            var dst = new Bitmap32(canvas, canvas);
+            for (int row = 0; row < p.Height; row++)
+                Buffer.BlockCopy(drawn.Pixels, row * drawn.Stride, dst.Pixels, ((row + p.OffsetY) * canvas + p.OffsetX) * 4, drawn.Stride);
+            return f with { Image = dst };
+        }).ToList();
         return frames.Count == 1
             ? (CurWriter.Write(frames[0].Image, x, y), ".cur")
             : (AniWriter.Write(frames, x, y), ".ani");
     }
+
+    /// <summary>
+    /// The applied file for this pointer size and display scale. Smooth cursors use a double-size canvas
+    /// so they stay sharp; pixel and jagged ones are drawn at the exact size Windows shows them, so
+    /// Windows' own scaling cannot soften their hard edges.
+    /// </summary>
+    public static (byte[] Data, string Extension) ExportFor(Slot slot, AnimatedCursor asset, int baseSize, double dpiScale)
+    {
+        if (CursorStyles.Of(slot) == CursorStyles.Smooth) return Export(slot, asset, CanvasFor(baseSize));
+        int canvas = Math.Clamp((int)Math.Round(baseSize * dpiScale), 16, CurWriter.MaxSize);
+        return Export(slot, asset, canvas, PixelBlock(dpiScale));
+    }
+
+    /// <summary>One block of the pixel style is two pointer-size units.</summary>
+    public static int PixelBlock(double dpiScale) => Math.Max(2, (int)Math.Round(2 * dpiScale));
 
     /// <summary>Canvas size for applied cursors: double the pointer size so they stay sharp at high DPI.</summary>
     public static int CanvasFor(int baseSize) => Math.Clamp(baseSize * 2, 64, CurWriter.MaxSize);

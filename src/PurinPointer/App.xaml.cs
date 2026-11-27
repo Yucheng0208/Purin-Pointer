@@ -7,6 +7,17 @@ namespace PurinPointer;
 
 public partial class App : Application
 {
+    protected override void OnExit(ExitEventArgs e)
+    {
+        ThemeManager.StopListening();
+        base.OnExit(e);
+
+        // Closing the window must end the process. Should anything still hold it open
+        // (a stuck file read, a slow network call), end it anyway after a short grace period.
+        var code = e.ApplicationExitCode;
+        new Thread(() => { Thread.Sleep(3000); Environment.Exit(code); }) { IsBackground = true }.Start();
+    }
+
     static string LogFile => Path.Combine(CursorSystem.DataDir, "error.log");
 
     void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

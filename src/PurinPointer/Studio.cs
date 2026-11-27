@@ -119,6 +119,30 @@ public sealed class Studio
 
     public PreviewFrames? Preview(Slot slot) => Preview(slot.Asset);
 
+    readonly Dictionary<(string Asset, string Style, int W, int H, int Block), PreviewFrames> _styledCache = [];
+
+    /// <summary>
+    /// The slot drawn in its style at <paramref name="width"/> × <paramref name="height"/> device pixels,
+    /// for a preview that shows what Windows will draw; null for the smooth style (use <see cref="Preview(Slot)"/>).
+    /// </summary>
+    public PreviewFrames? StyledPreview(Slot slot, int width, int height, int pixelBlock)
+    {
+        var style = CursorStyles.Of(slot);
+        if (style == CursorStyles.Smooth || Preview(slot) is not { } source) return null;
+        var key = (slot.Asset, style, width, height, pixelBlock);
+        if (_styledCache.TryGetValue(key, out var cached)) return cached;
+        if (_styledCache.Count > 32) _styledCache.Clear();
+        var c = source.Cursor;
+        var frames = c.Frames.Select(f => f with { Image = CursorStyles.Render(f.Image, Math.Max(1, width), Math.Max(1, height), style, pixelBlock) }).ToList();
+        return _styledCache[key] = PreviewFrames.From(new AnimatedCursor(frames, c.HotspotX, c.HotspotY));
+    }
+
+    public void SetStyle(string style)
+    {
+        Slot.Style = style == CursorStyles.Smooth ? null : style;
+        Save();
+    }
+
     /// <summary>The first filled slot of a theme, for its thumbnail in the sidebar.</summary>
     public PreviewFrames? ThemeThumbnail(Profile p) =>
         p.Slots.Where(s => !s.IsEmpty).Select(Preview).FirstOrDefault(f => f is not null);
@@ -136,7 +160,7 @@ public sealed class Studio
 
     public bool StatusIsWarning => StatusKey is "applyFailed" or "loadFailed" or "refreshWarning" or "nothingRemoved";
     public bool StatusIsSuccess => StatusKey is "applied" or "alreadyApplied" or "nativeRestored" or "imported" or "backgroundRemoved"
-                                   or "restored" or "originalRestored" or "sizeChanged";
+                                   or "restored" or "originalRestored" or "sizeChanged" or "calibrateDone";
 
     // ── Language and appearance ──────────────────────────────────────────────
 
@@ -334,7 +358,8 @@ public sealed class Studio
         if (!CanApply) return;
         var p = Profile;
         var snapshot = p.Clone();
-        int canvas = CursorOps.CanvasFor(CursorSystem.GetBaseSize());
+        int baseSize = CursorSystem.GetBaseSize();
+        double dpi = CursorSystem.DpiScale();
         _ = Run(async () =>
         {
             // Build every file first, so a broken asset leaves Windows untouched.
@@ -344,7 +369,7 @@ public sealed class Studio
                 foreach (var slot in snapshot.Slots.Where(s => !s.IsEmpty))
                 {
                     var asset = Assets.Load(slot.Asset, ImageLoader.Decode);
-                    var (data, ext) = CursorOps.Export(slot, asset, canvas);
+                    var (data, ext) = CursorOps.ExportFor(slot, asset, baseSize, dpi);
                     var path = CursorSystem.StoreCursorFile($"{slot.Key}", data, ext);
                     foreach (var role in CursorModes.Roles(slot.Key)) result[role] = path;
                 }

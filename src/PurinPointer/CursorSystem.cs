@@ -253,6 +253,16 @@ public static class CursorSystem
     const uint SPIF_UPDATEINIFILE = 0x01;
     const uint SPIF_SENDCHANGE = 0x02;
 
+    /// <summary>The system display scale (1 = 100 %), which Windows uses to size pointers.</summary>
+    public static double DpiScale()
+    {
+        try { return Math.Max(1, GetDpiForSystem() / 96.0); }
+        catch (EntryPointNotFoundException) { return 1; }
+    }
+
+    [DllImport("user32.dll")]
+    static extern uint GetDpiForSystem();
+
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);

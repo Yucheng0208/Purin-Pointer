@@ -245,10 +245,23 @@ public partial class MainWindow : Window
         if (!SizeSlider.IsMouseCaptureWithin) SizeSlider.Value = baseSize;
         ResetSizeText.Text = T("resetSize");
         SizeHint.Text = T("sizeHint");
+        var style = CursorStyles.Of(slot);
+        StyleLabel.Text = T("styleHeading");
+        StyleSmoothText.Text = T("style.smooth");
+        StylePixelText.Text = T("style.pixel");
+        StyleJaggedText.Text = T("style.jagged");
+        StyleSmooth.IsChecked = style == CursorStyles.Smooth;
+        StylePixel.IsChecked = style == CursorStyles.Pixel;
+        StyleJagged.IsChecked = style == CursorStyles.Jagged;
+        StyleButtons.IsEnabled = has;
+        StyleHint.Text = T("styleHint." + style);
 
         HotspotHeading.Text = T("hotspotHeading");
         ResetHotspotText.Text = T("resetHotspot");
         ResetHotspotButton.IsEnabled = has && slot.Hotspot is not null;
+        CalibrateText.Text = T("calibrate");
+        CalibrateButton.ToolTip = T("calibrateTip");
+        CalibrateButton.IsEnabled = has && preview is not null;
         HotspotInputs.IsEnabled = has;
         var (w, h) = DisplaySize(preview, baseSize, actual: true);
         var (hx, hy) = _studio.HotspotOf(slot);
@@ -303,13 +316,24 @@ public partial class MainWindow : Window
         NoCursorText.Visibility = preview is null ? Visibility.Visible : Visibility.Collapsed;
         PreviewHost.Visibility = preview is null ? Visibility.Collapsed : Visibility.Visible;
         PreviewChecker.Visibility = wand && preview is not null ? Visibility.Visible : Visibility.Collapsed;
-        if (!ReferenceEquals(PreviewImage.Frames, preview)) PreviewImage.Frames = preview;
-        if (preview is null) return;
+        if (preview is null) { PreviewImage.Frames = null; return; }
 
         var (w, h) = DisplaySize(preview, baseSize);
         PreviewHost.Width = PreviewImage.Width = w;
         PreviewHost.Height = PreviewImage.Height = h;
-        RenderOptions.SetBitmapScalingMode(PreviewImage, wand ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
+
+        // Pixel and jagged styles: show what Windows will draw (the pointer at its real pixel size),
+        // enlarged without smoothing so the blocks and hard edges are visible.
+        var shown = preview;
+        if (!wand)
+        {
+            double dpi = VisualTreeHelper.GetDpi(this).DpiScaleX;
+            var (aw, ah) = DisplaySize(preview, baseSize, actual: true);
+            shown = _studio.StyledPreview(slot, (int)Math.Round(aw * dpi), (int)Math.Round(ah * dpi), CursorOps.PixelBlock(dpi)) ?? preview;
+        }
+        if (!ReferenceEquals(PreviewImage.Frames, shown)) PreviewImage.Frames = shown;
+        bool hard = wand || !ReferenceEquals(shown, preview);
+        RenderOptions.SetBitmapScalingMode(PreviewImage, hard ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
         PreviewHost.Cursor = wand ? Cursors.Cross : Cursors.Hand;
 
         var (hx, hy) = _studio.HotspotOf(slot);
@@ -521,6 +545,14 @@ public partial class MainWindow : Window
 
     void OnResetSize(object sender, RoutedEventArgs e) => RunSafely(() => _studio.SetBaseSize(32));
 
+    // ── Drawing style ────────────────────────────────────────────────────────
+
+    void OnStyleClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string style }) RunSafely(() => _studio.SetStyle(style));
+        else Refresh();
+    }
+
     // ── Hotspot ──────────────────────────────────────────────────────────────
 
     void OnHotspotKey(object sender, KeyEventArgs e)
@@ -541,6 +573,18 @@ public partial class MainWindow : Window
     }
 
     void OnResetHotspot(object sender, RoutedEventArgs e) => _studio.SetHotspot(null);
+
+    void OnCalibrate(object sender, RoutedEventArgs e)
+    {
+        if (_studio.Preview(_studio.Slot) is not { } preview) return;
+        var slot = _studio.Slot;
+        var window = new CalibrationWindow(slot, preview.Cursor, _studio.HotspotOf(slot), _studio.BaseSize) { Owner = this };
+        if (window.ShowDialog() == true && window.Result is { } hot)
+        {
+            _studio.SetHotspot([hot.X, hot.Y]);
+            _studio.SetStatus("calibrateDone");
+        }
+    }
 
     void OnShowHotspotChanged(object sender, RoutedEventArgs e) => Refresh();
 

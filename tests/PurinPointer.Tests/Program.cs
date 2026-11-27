@@ -162,7 +162,7 @@ var tests = new List<(string Name, Action Run)>
         lib.Language = "ja"; lib.Appearance = "dark"; lib.InUse = p.Id;
         var back = Library.Deserialize(lib.Serialize());
         Eq(p.Id, back.Selected, "selected");
-        Eq(16, back.Current!.Slots.Count, "4 main + 12 extra slots");
+        Eq(17, back.Current!.Slots.Count, "4 main + 13 extra slots");
         Eq(0.25, back.Current.Slot(CursorModes.Wait).Hotspot![1], "hotspot");
         Eq(1, back.Current.FilledMain, "main filled"); Eq(1, back.Current.FilledExtra, "extra filled");
         Eq("ja", back.Language, "language"); Eq("dark", back.Appearance, "appearance");
@@ -200,8 +200,10 @@ var tests = new List<(string Name, Action Run)>
         Eq("Wait,AppStarting", string.Join(",", CursorModes.Roles(CursorModes.Wait).Select(r => r.RegistryName)), "wait roles");
         Eq("Hand", CursorModes.Roles(CursorModes.Pointing)[0].RegistryName, "pointing");
         Eq("IBeam", CursorModes.Roles(CursorModes.Text)[0].RegistryName, "text");
-        var covered = CursorModes.All.SelectMany(CursorModes.Roles).Select(r => r.RegistryName).OrderBy(x => x).ToList();
-        Eq(string.Join(",", CursorRole.All.Select(r => r.RegistryName).OrderBy(x => x)), string.Join(",", covered), "every Windows pointer reachable once");
+        Eq("AppStarting", CursorModes.Roles("AppStarting")[0].RegistryName, "background pointer has its own slot");
+        True(CursorModes.All.ToList().IndexOf("AppStarting") > CursorModes.All.ToList().IndexOf(CursorModes.Wait), "applied after wait, so it overrides");
+        var covered = CursorModes.All.SelectMany(CursorModes.Roles).Select(r => r.RegistryName).Distinct().OrderBy(x => x).ToList();
+        Eq(string.Join(",", CursorRole.All.Select(r => r.RegistryName).OrderBy(x => x)), string.Join(",", covered), "every Windows pointer reachable");
     }),
     ("image imports use AniOnMac's default hotspots", () =>
     {
@@ -279,6 +281,54 @@ var tests = new List<(string Name, Action Run)>
            string.Join(",", CursorRole.All.Select(r => r.RegistryName)), "order");
         Eq(@"%SystemRoot%\cursors\aero_arrow.cur", CursorRole.Get("Arrow").DefaultValue, "arrow default");
         Eq("", CursorRole.Get("IBeam").DefaultValue, "ibeam default is built in");
+    }),
+    ("drawing styles: jagged edges are hard, pixel style shows blocks, style survives export and JSON", () =>
+    {
+        // A soft disc: anti-aliased edge pixels have partial alpha.
+        var disc = new Bitmap32(64, 64);
+        for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
+        {
+            double d = Math.Sqrt((x - 31.5) * (x - 31.5) + (y - 31.5) * (y - 31.5));
+            int o = (y * 64 + x) * 4;
+            disc.Pixels[o] = (byte)(x * 4); disc.Pixels[o + 1] = 80; disc.Pixels[o + 2] = (byte)(y * 4);
+            disc.Pixels[o + 3] = (byte)Math.Clamp((28 - d) * 64, 0, 255);
+        }
+        bool Hard(Bitmap32 b) { for (int i = 3; i < b.Pixels.Length; i += 4) if (b.Pixels[i] is not (0 or 255)) return false; return true; }
+        True(!Hard(CursorStyles.Render(disc, 24, 24, CursorStyles.Smooth)), "smooth keeps soft edges");
+        True(Hard(CursorStyles.Render(disc, 24, 24, CursorStyles.Jagged)), "jagged edges are fully on or off");
+        var pixel = CursorStyles.Render(disc, 24, 24, CursorStyles.Pixel, 2);
+        True(Hard(pixel), "pixel style has hard edges");
+        for (int y = 0; y < 24; y += 2) for (int x = 0; x < 24; x += 2)
+        {
+            int o = (y * 24 + x) * 4;
+            foreach (var (dx, dy) in new[] { (1, 0), (0, 1), (1, 1) })
+                True(pixel.Pixels.AsSpan(o, 4).SequenceEqual(pixel.Pixels.AsSpan(((y + dy) * 24 + x + dx) * 4, 4)), $"2 x 2 block at {x},{y}");
+        }
+
+        var slot = new Slot { Key = CursorModes.Arrow, Asset = "a", Style = CursorStyles.Jagged };
+        var cur = new AnimatedCursor([new CursorFrame(disc, 0)], 0, 0);
+        var (data, ext) = CursorOps.ExportFor(slot, cur, 32, 1.5);
+        Eq(".cur", ext, "still");
+        var back = IconReader.Read(data);
+        Eq(48, back.Image.Width, "jagged is drawn at the size Windows shows (32 x 150 %)");
+        True(Hard(back.Image), "exported edges stay hard");
+        Eq(64, IconReader.Read(CursorOps.ExportFor(new Slot { Key = "arrow", Asset = "a" }, cur, 32, 1.5).Data).Image.Width, "smooth keeps the double canvas");
+
+        var lib = Library.CreateNew("t");
+        lib.Current!.Slot(CursorModes.Arrow).Style = CursorStyles.Pixel;
+        Eq(CursorStyles.Pixel, Library.Deserialize(lib.Serialize()).Current!.Slot(CursorModes.Arrow).Style, "style saved");
+        Eq(CursorStyles.Smooth, CursorStyles.Of(new Slot { Style = "bogus" }), "unknown style is smooth");
+    }),
+    ("calibration moves the hotspot by the mean click offset, ignoring one stray click", () =>
+    {
+        // Tip drawn 4 px right and 2 px below the hotspot of a 32 x 16 cursor; one click slipped badly.
+        var offsets = new List<(double, double)> { (4, 2), (4.5, 1.5), (3.5, 2.5), (4, 2), (20, -15) };
+        var r = Calibration.Solve(offsets, (0.25, 0.5), 32, 16);
+        Eq(4.0, r.OffsetX, "dx"); Eq(2.0, r.OffsetY, "dy");
+        Eq(0.375, r.HotX, "hx"); Eq(0.625, r.HotY, "hy");
+        var clamped = Calibration.Solve([(-50, 0)], (0.1, 0.1), 32, 32);
+        Eq(0.0, clamped.HotX, "clamped to the image");
+        Eq(0.3, Calibration.Solve([], (0.3, 0.4), 32, 32).HotX, "no clicks keeps the hotspot");
     }),
 };
 

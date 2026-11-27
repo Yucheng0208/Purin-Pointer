@@ -33,12 +33,22 @@ public static class ThemeManager
         if (!_listening)
         {
             _listening = true;
-            SystemEvents.UserPreferenceChanged += (_, e) =>
-            {
-                if (Mode == System && e.Category is UserPreferenceCategory.General or UserPreferenceCategory.Color)
-                    Application.Current.Dispatcher.BeginInvoke(() => Apply(System));
-            };
+            SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
         }
+    }
+
+    static void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+    {
+        if (Mode == System && e.Category is UserPreferenceCategory.General or UserPreferenceCategory.Color)
+            Application.Current?.Dispatcher.BeginInvoke(() => Apply(System));
+    }
+
+    /// <summary>Stops following the system theme. SystemEvents asks for its handlers to be removed before exit.</summary>
+    public static void StopListening()
+    {
+        if (!_listening) return;
+        _listening = false;
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
     }
 
     /// <summary>
