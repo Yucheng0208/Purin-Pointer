@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <b>English</b> · <a href="README.tw.md">繁體中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a>
+  <b>English</b> · <a href="README.tw.md">繁體中文</a> · <a href="README.zh-Hans.md">简体中文</a> · <a href="README.ja.md">日本語</a> · <a href="README.ko.md">한국어</a>
 </p>
 
 ---
@@ -22,11 +22,13 @@ Purin Pointer is the Windows edition of AniOnMac. Import `.ani`, `.cur`, PNG, GI
 ## Features
 
 - **Themes**: as many as you like, with add, duplicate and delete in the sidebar. The applied theme is tagged *In use*, and everything saves automatically.
-- **4 modes plus 12 pointers**: Arrow, Pointing, IBeam and Wait, plus the other 12 Windows pointers under *More pointers*. Only filled modes are applied.
+- **4 modes plus 13 pointers**: Arrow, Pointing, IBeam and Wait, plus the other 13 Windows pointers under *More pointers*, including *Working in Background* (it follows Wait until you give it its own cursor). Only filled modes are applied.
 - **Any source**: `.ani`, `.cur`, `.ico`, PNG, JPG, BMP, animated GIF, or a folder of numbered images.
 - **Timeline**: order frames, remove frames, set the frame time and preview live.
 - **Background removal**: *Auto remove* for flat backgrounds, the *Magic wand* for one colour across every frame.
 - **Hotspot**: drag it on an enlarged preview, or type X / Y.
+- **Hotspot calibration**: click five dots with your own cursor; Purin Pointer measures how far off the tip is and corrects the hotspot, ready to apply.
+- **Drawing style**: per mode, choose *High-res* (smooth edges), *Pixel* (visible square pixels) or *Jagged* (hard edges like classic pointers). The preview shows exactly what Windows will draw.
 - **Pointer size**: the same global size as Windows Settings (32–256 px), kept in sync.
 - **Undo**: *Undo last change* and *Restore Windows appearance* are one click away.
 - **Light and dark**: pudding-coloured themes, in 繁體中文, 简体中文, English, 日本語 and 한국어.
